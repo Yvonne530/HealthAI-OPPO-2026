@@ -1,0 +1,70 @@
+### ============================================================
+### Qwen2-VL-7B 医疗助手微调配置 (80GB A100 优化)
+### ============================================================
+
+### 模型配置
+model_name_or_path: Qwen/Qwen2-VL-7B-Instruct
+template: qwen2_vl
+visual_inputs: true  # Qwen2-VL 官方标准参数（替代旧版 qwen2_vl_enforce_base）
+
+### 数据配置
+dataset: rehab_train
+val_dataset: rehab_val
+cutoff_len: 4096
+max_samples: 1000000  # 不限制样本数
+preprocessing_num_workers: 8
+
+### LoRA 配置
+finetuning_type: lora
+lora_rank: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target: all  # 自动覆盖视觉+语言模块（LLaMA-Factory 官方推荐）
+create_new_adapter: false
+
+### 训练参数
+num_train_epochs: 3
+learning_rate: 1.0e-4
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+weight_decay: 0.01
+max_grad_norm: 1.0
+
+### 显存优化策略（核心配置）
+per_device_train_batch_size: 4          # 稳定起点（可降至2如果OOM）
+gradient_accumulation_steps: 8          # 等效 batch_size=32
+gradient_checkpointing: true            # 必须开启！节省 30%+ 显存
+bf16: true                              # A100 原生支持 BF16
+fp16: false                             # 与 bf16 互斥
+optim: adamw_torch
+ddp_find_unused_parameters: false
+
+### 评估配置
+per_device_eval_batch_size: 2
+eval_strategy: steps
+eval_steps: 50
+save_strategy: steps
+save_steps: 50
+load_best_model_at_end: false  # 节省磁盘空间
+
+### 磁盘保护
+output_dir: /kaggle/working/rehab_lora
+save_total_limit: 1                     # 只保留最新检查点
+logging_dir: /kaggle/working/rehab_lora/logs
+logging_steps: 10
+
+### 其他配置
+overwrite_output_dir: true
+ddp_timeout: 3600
+report_to: none                         # 不上传到 wandb/tensorboard
+save_safetensors: true
+include_num_input_tokens_seen: true
+
+### 随机种子
+seed: 42
+data_seed: 42
+
+### 推理配置（用于评估）
+do_sample: false
+temperature: 1.0
+top_p: 1.0

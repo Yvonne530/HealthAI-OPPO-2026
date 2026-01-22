@@ -1,0 +1,191 @@
+[
+  {
+    "id": "squat__side__standard__none__0016",
+    "image": "images/squat/squat__side__standard__none__0016.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的深蹲动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 侧面观察髋、膝、踝三点形成稳定垂直力线。\n2. 躯干直立，脊柱中立，无圆背。\n3. 大腿下蹲接近平行地面。\n【判定结果】:\n标准深蹲，可作为侧面正确样本。"
+      }
+    ],
+    "action": "squat",
+    "view": "side",
+    "sample_type": "standard",
+    "error_type": "none",
+    "images": [
+      "images/squat/squat__side__standard__none__0016.jpg"
+    ]
+  },
+  {
+    "id": "squat__side__standard__forward_lean__0017",
+    "image": "images/squat/squat__side__standard__forward_lean__0017.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的深蹲动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 侧面可见脊柱前倾，腰椎曲度过大。\n2. 髋部未充分后坐，重心偏前。\n3. 下蹲深度合理但代偿明显。\n【纠偏建议】:\n收紧核心，保持脊柱中立，想象臀部向后坐。"
+      }
+    ],
+    "action": "squat",
+    "view": "side",
+    "sample_type": "standard",
+    "error_type": "forward_lean",
+    "images": [
+      "images/squat/squat__side__standard__forward_lean__0017.jpg"
+    ]
+  },
+  {
+    "id": "squat__front__standard__knee_valgus__0018",
+    "image": "images/squat/squat__front__standard__knee_valgus__0018.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的深蹲动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 正面观察双膝向内偏移，膝盖未对齐脚尖。\n2. 膝关节内扣，臀部稳定性下降。\n3. 骨盆轻微外展不均。\n【纠偏建议】:\n启动臀中肌，保持膝盖方向与脚尖一致，控制膝外推。"
+      }
+    ],
+    "action": "squat",
+    "view": "front",
+    "sample_type": "standard",
+    "error_type": "knee_valgus",
+    "images": [
+      "images/squat/squat__front__standard__knee_valgus__0018.jpg"
+    ]
+  },
+  {
+    "id": "lunge__side__standard__none__0016",
+    "image": "images/lunge/lunge__side__standard__none__0016.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的弓步蹲动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 前后腿角度接近 90°。\n2. 躯干直立，骨盆水平。\n3. 重心居中，脚跟稳定接触地面。\n【判定结果】:\n标准弓步蹲，适合作为侧面正确样本。"
+      }
+    ],
+    "action": "lunge",
+    "view": "side",
+    "sample_type": "standard",
+    "error_type": "none",
+    "images": [
+      "images/lunge/lunge__side__standard__none__0016.jpg"
+    ]
+  },
+  {
+    "id": "lunge__side__standard__knee_over_toes__0017",
+    "image": "images/lunge/lunge__side__standard__knee_over_toes__0017.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的弓步蹲动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 前膝明显超过脚尖。\n2. 重心前移，踝关节受力增加。\n3. 骨盆稳定性略下降。\n【纠偏建议】:\n后退前脚位置，保持膝盖不超过脚尖，重心向后坐。"
+      }
+    ],
+    "action": "lunge",
+    "view": "side",
+    "sample_type": "standard",
+    "error_type": "knee_over_toes",
+    "images": [
+      "images/lunge/lunge__side__standard__knee_over_toes__0017.jpg"
+    ]
+  },
+  {
+    "id": "lunge__front__standard__pelvis_tilt__0018",
+    "image": "images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的弓步蹲动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 正面观察骨盆左右不水平，轻微歪斜。\n2. 双膝对称性一般，重量分布偏向一侧。\n3. 躯干稳定性受影响。\n【纠偏建议】:\n保持骨盆水平，意识将重心均分到两腿。"
+      }
+    ],
+    "action": "lunge",
+    "view": "front",
+    "sample_type": "standard",
+    "error_type": "pelvis_tilt",
+    "images": [
+      "images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg"
+    ]
+  },
+  {
+    "id": "lat_raise__front__standard__none__0016",
+    "image": "images/lateral_raise/lateral_raise__front__standard__none__0016.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的侧平举动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 手臂高度与肩平齐。\n2. 肩胛骨稳定，无耸肩。\n3. 左右对称。\n【判定结果】:\n正面侧平举标准样本。"
+      }
+    ],
+    "action": "lateral_raise",
+    "view": "front",
+    "sample_type": "standard",
+    "error_type": "none",
+    "images": [
+      "images/lateral_raise/lateral_raise__front__standard__none__0016.jpg"
+    ]
+  },
+  {
+    "id": "lat_raise__front__standard__shrug__0017",
+    "image": "images/lateral_raise/lateral_raise__front__standard__shrug__0017.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的侧平举动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 肩膀耸起，肩胛骨上提。\n2. 手臂角度略高于肩平，出现代偿。\n3. 动作节律不均。\n【纠偏建议】:\n放松肩膀，保持肩胛下沉，手臂控制在肩平高度。"
+      }
+    ],
+    "action": "lateral_raise",
+    "view": "front",
+    "sample_type": "standard",
+    "error_type": "shrug",
+    "images": [
+      "images/lateral_raise/lateral_raise__front__standard__shrug__0017.jpg"
+    ]
+  },
+  {
+    "id": "lat_raise__side__standard__low_height__0018",
+    "image": "images/lateral_raise/lateral_raise__side__standard__low_height__0018.jpg",
+    "conversations": [
+      {
+        "from": "human",
+        "value": "<image>\n请检查我的侧平举动作。"
+      },
+      {
+        "from": "gpt",
+        "value": "【推理过程】:\n1. 侧面观察手臂抬举不足，小于 60°。\n2. 肩关节负荷低，幅度不足。\n3. 躯干稳定但动作不完全。\n【纠偏建议】:\n增加抬举幅度至肩平附近，保持控制性动作。"
+      }
+    ],
+    "action": "lateral_raise",
+    "view": "side",
+    "sample_type": "standard",
+    "error_type": "low_height",
+    "images": [
+      "images/lateral_raise/lateral_raise__side__standard__low_height__0018.jpg"
+    ]
+  }
+]

@@ -1,0 +1,40 @@
+# ============================================================
+# Qwen2-VL 微调环境依赖包
+# ============================================================
+
+# 核心框架
+torch>=2.1.0
+transformers>=4.41.0
+accelerate>=0.30.0
+peft>=0.11.0
+trl>=0.8.6
+
+# LLaMA-Factory 核心依赖
+datasets>=2.16.0
+tiktoken>=0.7.0
+protobuf>=4.24.0
+sentencepiece>=0.2.0
+uvicorn>=0.29.0
+pydantic>=2.6.0
+
+# 多模态支持
+Pillow>=10.0.0
+torchvision>=0.16.0
+
+# 量化工具
+bitsandbytes>=0.43.0
+scipy>=1.11.0
+
+# 评估指标
+jieba>=0.42.1
+rouge-chinese>=1.0.3
+nltk>=3.8.1
+
+# 工具库
+tqdm>=4.66.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# 可选：监控工具（Kaggle 环境可能不需要）
+# tensorboard>=2.14.0
+# wandb>=0.15.0

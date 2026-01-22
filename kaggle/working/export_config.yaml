@@ -1,0 +1,42 @@
+### ============================================================
+### LoRA 权重导出配置
+### 将 LoRA 权重合并回基座模型
+### ============================================================
+
+### 基础模型路径
+model_name_or_path: Qwen/Qwen2-VL-7B-Instruct
+
+### LoRA 适配器路径
+adapter_name_or_path: /kaggle/working/rehab_lora
+
+### 模板配置
+template: qwen2_vl
+finetuning_type: lora
+
+### 导出配置
+# 关键：导出到大容量临时目录，避免 /kaggle/working 磁盘爆满
+export_dir: /kaggle/temp/full_model
+
+# 分片配置（每个分片最大 2GB）
+export_size: 2
+
+# 导出设备（使用 CPU 避免 GPU 显存占用）
+export_device: cpu
+
+# 导出格式
+export_legacy_format: false  # 使用 safetensors 格式
+export_hub_model_id: null    # 不上传到 HuggingFace Hub
+
+### 量化准备
+# 导出后会生成以下文件结构：
+# /kaggle/temp/full_model/
+# ├── config.json
+# ├── generation_config.json
+# ├── model-00001-of-00004.safetensors
+# ├── model-00002-of-00004.safetensors
+# ├── model-00003-of-00004.safetensors
+# ├── model-00004-of-00004.safetensors
+# ├── model.safetensors.index.json
+# ├── tokenizer_config.json
+# ├── tokenizer.json
+# └── preprocessor_config.json
