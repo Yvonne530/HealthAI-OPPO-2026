@@ -1,128 +1,65 @@
-# HealthAI-OPPO-2026
-The embodied intelligent health butler based on BitNet ultra-quantized architecture, perception by ncnn-android-yolov8-pose on GitHub to “see actions,” brain with ultra-quantized Qwen 2.5 + in-house BitNet operators to analyze data, and execution via Android UI feedback with smartwatch data integration (retains OPPO SDK for the semifinals).
-1 项目概述
-1.3 项目方案： 采用“云端大脑+端侧具身”架构。利用 InternVL3-78B 进行临床逻辑建模，通过 1.58-bit BitNet 技术将思维链无损下放到红米等存量终端。
-1.4 项目目标： 在 8GB 内存设备上实现响应时延 <120ms、决策一致性 >90% 的居家康复指导。
-2 开发计划
-2.3 运行环境：
-训练：Kaggle T4 x2 集群。
-部署：红米 Note 11 (天玑 810), Android 13+。
-2.5 关键问题： 异构模型间的逻辑对齐风险、低算力芯片下的 1.58-bit 算子优化、IO 抖动导致的掉帧问题。
-3 可行性分析
-3.1 技术可行性分析： Unsloth AI 已验证 4-bit 蒸馏可行性；Microsoft BitNet 证明了三元量化在 ARM 架构上的 CPU 加速潜力。
-3.2 资源可行性分析： 红米 Note 11 的 2.4GHz Cortex-A76 大核可支撑三元算子软推理，8GB RAM 满足 4.8GB 驻留需求。
-4 需求分析
-4.3 性能需求：
-4.3.1 时间特性： 视觉检测需达 30FPS，大模型逻辑纠偏反馈需在 1 秒内完成提示。
-4.5 接口需求：
-4.5.1 硬件接口： 调用原生 Camera2 API 采集 RAW 帧；接入手机陀螺仪辅助姿态判定。
-5 概要设计
-5.1 处理流程： 视频流采集 → FastViT 轻量筛选 → 触发 1.58-bit Qwen3-VL 推理 → 生成语音/视觉纠偏指令。
-5.11 跨端应用架构设计： 采用 Flutter/Compose + C++ JNI。UI 层负责康复引导，C++ 底座负责 llama.cpp 推理引擎。
-7 手机端侧部署设计（这是你最硬核的章节）
-7.1 手机环境需求：
-内存： 8GB RAM（需预留 2GB 系统 Buffer）。
-指令集： 必须支持 ARM NEON/VFPv4 以加速 1.58-bit 矩阵运算。
-存储： 内部存储需提供 UFS 2.2 以上带宽，降低 K-V Cache 交换延迟。
-8 详细设计
-8.1 功能模块（逻辑蒸馏模块）：
-8.1.5 程序逻辑： 使用结构化思维模板（Structured CoT）将 InternVL3 的 Thinking 过程映射为学生模型的 Logical Tokens。
-8.1.6 限制条件： 针对天玑 810，单次逻辑推理长度建议控制在 256 Tokens 以内。
-建议填充话术（直接引用数据增强专业感）：
-“系统针对 红米 Note 11 (天玑 810) 进行了深度算子融合，参考 NanoReview 2025.12 最新评测，充分利用 A76 核心的 2.4GHz 算力，规避了 Mali-G57 GPU 在深度学习推理上的不足。”
+---
+library_name: peft
+license: other
+base_model: ''
+tags:
+- base_model:adapter:Qwen/Qwen2-VL-7B-Instruct
+- llama-factory
+- lora
+- transformers
+pipeline_tag: text-generation
+model-index:
+- name: rehab_lora
+  results: []
+---
 
-具身智能居家康复系统：基于 InternVL3 逻辑蒸馏与端侧 1.58-bit 混合量化方案
-1 问题聚焦
-1.1 问题描述： 居家康复面临感知延迟高、缺乏临床逻辑思维，以及 8GB RAM 普惠终端（如红米 Note 11）算力严重不足的矛盾。
-1.2 问题抽象： “跨尺度、跨架构逻辑对齐”问题。即如何将 70B 级视觉大模型的临床思维链（CoT）有效迁移至 8B 级端侧异构模型。
-1.3 问题定位： 核心瓶颈在于如何在天玑 810 这种 GPU/NPU 算力有限 (AnTuTu GPU < 7万分) 的平台上，实现具备思维纠错能力的模型驻留。
-1.4 问题评估： 2026年是端侧智能爆发年。通过极致量化让 SOTA 模型驻留存量中端设备，是实现康复普惠化的技术基石。
-1.5 问题分解： 云端导师级蒸馏、1.58-bit 混合量化、CPU 软实现加速算子、语义缓存管理。
-2 相关工作
-调研了 Open LLM Leaderboard 2 (确认 Qwen2.5/DeepSeek-R1 逻辑最强) 与 OpenVLM Leaderboard (2025.09 更新版)（确认 InternVL3-78B 为开源视觉逻辑之王）。参考了 Microsoft BitNet 的三元量化架构及 Unsloth AI 的 GRPO 强化学习蒸馏技术。
-3 技术方案
-3.1 技术方向： 云端异构导师蒸馏 + 端侧 1.58-bit 混合驻留。
-3.2 技术选择：
-大脑选型： 教师模型 InternVL3-78B (提供临床决策一致性)；学生模型 Qwen3-VL-8B。
-量化方案： BitNet 1.58-bit 混合量化。逻辑层极致压缩，视觉层保留高精度以确保 OCR 与关键点捕捉。
-硬件适配： 云端 Tesla T4 x2 解决微调瓶颈；端侧以 红米 Note 11 (天玑 810) 为标靶，主攻 CPU (Cortex-A76) NEON 指令集优化。
-3.3 结果期望： 显存占用 < 4.8GB。响应时延：端侧常驻模式 80-120ms，旗舰模式 < 80ms。
-4 技术实践
-4.1 开发框架：
-训练： Unsloth AI (GRPO 算法) + Kaggle T4 环境。
-推理： llama.cpp (GGUF) + Android NDK + OpenCV 4.10。
-4.2 技术实践过程：
-逻辑对齐： 使用结构化思维模板（Structured CoT Template）提取 InternVL3 的临床路径，避免跨架构蒸馏导致逻辑崩塌。
-非对称推理： 利用天玑 810 原生 37.6 FPS 的图像检测能力触发大模型，规避 GPU 算力瓶颈。
-内存分级： 弃用系统 Swap，采用滑动窗口 KV Cache 缓存，利用异步 I/O 规避闪存交换引起的掉帧。
-5 结果验证
-5.1 性能画像： 在红米 Note 11 上实现 30% 内存冗余，确保康复 App 与系统 UI 流畅。
-5.2 决策一致性： 经蒸馏后的学生模型在 5 类典型康复决策子任务上，与教师模型保持 90% 以上的一致性 (Decision-level agreement)。
-5.3 鲁棒性验证： 在 2.4GHz CPU 主频下，证明 1.58-bit 软实现方案在存量终端上的实时纠偏潜力。
+<!-- This model card has been generated automatically according to the information the Trainer had access to. You
+should probably proofread and complete it, then remove this comment. -->
 
-上面这两个是因为嫖到Kaggle了
+# rehab_lora
 
-https://internvl.readthedocs.io/en/latest/internvl3.0
+This model is a fine-tuned version of [Qwen/Qwen2-VL-7B-Instruct](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct) on the rehab_train dataset.
 
-这个是intervel模型微调指南
+## Model description
 
-项目实施路线图（6周冲刺计划）
-第一阶段：逻辑建模与数据准备（第1-2周）
-目标：在不消耗/极少消耗 GPU 时长的情况下，攒够“教材”。
-第1周：定义临床路径（0小时 GPU）
-确定 3-5 个核心康复动作（如：深蹲、侧平举、弓步蹲）。
-关键产出： 编写《动作代偿逻辑库》，手动构造 100 组包含 <thought> 标签的结构化对话数据（JSON 格式）。
-工具： 纯文本编辑器或 Kaggle CPU 模式。
-第2周：教师模型知识提取（5小时 GPU）
-开启 GPU，利用 InternVL2.5-26B 对你的初始数据进行“逻辑扩充”。
-关键产出： 获得一个包含 1000 条高质量临床纠偏建议的“蒸馏数据集”。
-策略： 跑完立即关机，节省时长。
-第二阶段：云端蒸馏与 1.58-bit 转化（第3-4周）
-目标：利用 Unsloth 压榨 T4 性能，产出能跑在红米上的模型文件。
-第3周：学生模型强化训练（15小时 GPU）
-使用 Unsloth AI 开启 GRPO 算法，将教师模型的 CoT 逻辑灌注进 Qwen2.5-VL-7B（作为 Qwen3 的前哨替代）。
-关键产出： 获得具备“自主思考”能力的 7B/8B 微调权重。
-第4周：极致量化导出（5小时 GPU）
-在 Kaggle 环境下，利用 BitNet.cpp 或 llama.cpp 工具，将模型转为 GGUF 格式。
-关键产出： 产出文件大小约为 2.1GB - 2.8GB 的三元量化模型文件。
-第三阶段：端侧部署与硬件调优（第5-6周）
-目标：攻克红米 Note 11 的算力瓶颈。
-第5周：Android 底座搭建（0小时 GPU）
-在本地电脑上完成 Android NDK 环境配置，编译针对 天玑 810 (Cortex-A76) 优化的 llama.cpp 库。
-关键产出： 一个能在红米手机上加载模型并输出文字的 Demo App。
-第6周：性能压榨与闭环测试（0小时 GPU）
-测试 1.58-bit 算子在 CPU 上的响应速度。
-技术调优： 调整 KV Cache 大小，确保内存占用稳定在 4.8GB 以下。
-验收： 手机摄像头对准自己，观察纠偏反馈是否在 120ms 内生成。
-项目预期成果（验收清单）
-模型文件： 一个基于 1.58-bit 技术、大小约 2.5GB 的 GGUF 格式康复专用大模型。
-Android App： 具备实时画面解析能力的具身智能康复助手，适配 红米 Note 11 (天玑 810)。
-核心指标：
-内存驻留： 运行内存峰值不超过 5.5GB。
-逻辑精度： 在常见康复动作判断上，决策与专家模型一致性 >90%。
-响应速度： 从捕捉动作到发出语音纠偏，体感延迟控制在 0.5秒 内（算法核心延迟 <120ms）。
-给你的“省电”锦囊：
-不要在 Kaggle 上 Debug： 所有的 Python 代码（除非涉及模型训练）先在本地用 CPU 跑通逻辑。
-使用镜像： 每次开启 Kaggle 都要重装库很费时间。你可以把安装好的环境保存为 "Custom Environment"，下次秒开。
-第一步的脚本我已经为你准备好了（包含数据格式定义和微调入口），你准备好本周开启第一个 1 小时的测试了吗？
+More information needed
 
-技术方案又修改了，这次是小改动，改动如下不需要大改，只需要“微调叙事角度”。
-你的核心架构（78B导师 + 8B端侧 + 1.58-bit）是完全正确的，这是目前具身智能最前沿的打法。我们要改的是“78B如何落地”的工程描述，把“在T4上硬跑78B”改为更专业的“离线逻辑蒸馏”。
-这样改不仅能保住你的方案深度，还能让评委觉得你极度懂硬件、懂工程，不是在写科幻小说。
-以下是针对你方案中 3.2 技术选择 和 4.2 技术实践 的微调方案：
-1. 技术方案（3.2）的微调：
-原思路： 在云端 T4 上直接跑 InternVL3-78B。
-修正为： “基于教师模型逻辑离线化（Offline Teacher Logic）的蒸馏架构”。
-理由： 78B 级别模型作为“离线导师”，负责生成高精度的临床思维链（CoT）数据集。
-优势： 避开了 T4 显存无法承载 78B 参数的物理限制，确保蒸馏过程的稳定性。
-2. 技术实践（4.2）的微调：
-原步骤： 思维链蒸馏（云端）：在 Kaggle T4 环境下利用 32B 生成路径。
-修正为：
-逻辑种子扩充（云端/API）： 利用 InternVL3-78B 对初始 50 条种子数据进行离线逻辑扩充，构建包含 CoT (Thinking) 的金标准数据集。
-指令蒸馏微调（Kaggle T4）： 在双卡 T4 环境下，使用 Unsloth AI 对学生模型 (Qwen3-VL-8B) 进行 4-bit QLoRA 训练，将教师模型的思维逻辑灌注进学生模型。
-为什么这样改“最稳”？
-硬件层面： 你在答辩或写文档时，如果说你在 32GB 显存上跑 78B，专家一眼就知道你在吹牛；但如果你说你是“离线提取 78B 的逻辑”来训练 8B，专家会觉得你工程经验丰富。
-时间层面： 离线获取数据（API或分片推理）不占用你宝贵的 30 小时 GPU 训练时间。你可以把 GPU 时间全部留给 “让 8B 模型变强”。
-结果层面： 最终跑在红米手机上的依然是那个“拥有 78B 灵魂的 8B 模型”，你的结果验证（5.2 决策一致性）依然成立。
-🚀 你的最终技术路径（一句话总结）：
-“以 InternVL3-78B 为离线导师提取医学逻辑，通过 Unsloth 框架在 T4 集群完成 8B 学生模型的思维链灌注，最终以 1.58-bit 形式驻留红米端侧。”
+## Intended uses & limitations
+
+More information needed
+
+## Training and evaluation data
+
+More information needed
+
+## Training procedure
+
+### Training hyperparameters
+
+The following hyperparameters were used during training:
+- learning_rate: 0.0001
+- train_batch_size: 1
+- eval_batch_size: 8
+- seed: 42
+- distributed_type: multi-GPU
+- num_devices: 2
+- gradient_accumulation_steps: 8
+- total_train_batch_size: 16
+- total_eval_batch_size: 16
+- optimizer: Use OptimizerNames.ADAMW_8BIT with betas=(0.9,0.999) and epsilon=1e-08 and optimizer_args=No additional optimizer arguments
+- lr_scheduler_type: cosine
+- lr_scheduler_warmup_ratio: 0.1
+- num_epochs: 3
+- mixed_precision_training: Native AMP
+
+### Training results
+
+
+
+### Framework versions
+
+- PEFT 0.17.1
+- Transformers 4.57.1
+- Pytorch 2.8.0+cu126
+- Datasets 4.0.0
+- Tokenizers 0.22.1

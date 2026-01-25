@@ -1,69 +1,63 @@
 ### ============================================================
-### 冒烟测试配置 (针对单卡 T4 16GB 极致简化版)
-### 目标：验证代码链路，修复 ValueError 报错
+### 冒烟测试配置 (单卡 T4 16GB - 4-bit 量化稳定版)
 ### ============================================================
 
 ### 模型配置
 model_name_or_path: Qwen/Qwen2-VL-7B-Instruct
 template: qwen2_vl
-# 移除 visual_inputs: true，避免 HfArgumentParser 报错
+quantization_bit: 4            # 新增：4bit量化，解决 80% 加载 OOM
+quantization_type: nf4
+double_quantization: true
 
 ### 数据配置
 dataset: rehab_train
-# 移除 val_dataset，将 eval_strategy 设为 no，彻底解决验证集报错
 cutoff_len: 1024
-max_samples: 100
+max_samples: 45                # 匹配你的图片数量
 preprocessing_num_workers: 1
 
-### LoRA 配置（极简）
+### LoRA 配置
 finetuning_type: lora
 lora_rank: 8
 lora_alpha: 16
 lora_dropout: 0.05
 lora_target: all
 create_new_adapter: false
-# 移除 modules_to_save: []
 
-### 训练参数（仅 4 步）
+### 训练参数
 num_train_epochs: 1
-max_steps: 4
+max_steps: 4                   # 仅跑 4 步验证
 learning_rate: 1.0e-4
 lr_scheduler_type: cosine
 warmup_ratio: 0.1
 weight_decay: 0.01
 max_grad_norm: 1.0
 
-### 显存优化（单卡 T4）
+### 显存优化
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 2
 gradient_checkpointing: true
 bf16: false
-fp16: true
+fp16: true                     # T4 必须用 fp16
 optim: adamw_8bit
-ddp_find_unused_parameters: false
 
-### 评估与保存（冒烟模式关闭评估）
+### 评估与保存
 eval_strategy: "no"
 save_strategy: steps
 save_steps: 4
 load_best_model_at_end: false
 
-### 视觉 Token 限制 (显存安全的关键)
-# 使用通用的 vllm_maxlen 替代报错的 qwen2_vl_max_pixels
+### 视觉 Token 限制
 vllm_maxlen: 512
 
 ### 输出配置
-output_dir: /kaggle/working/rehab_lora
+output_dir: /kaggle/working/rehab_lora_smoke
 save_total_limit: 1
-logging_dir: /kaggle/working/rehab_lora/logs
 logging_steps: 1
 overwrite_output_dir: true
 report_to: none
 save_safetensors: true
 
-### 运行环境配置
+### 其他
 seed: 42
-data_seed: 42
 dataloader_num_workers: 1
 dataloader_pin_memory: false
-torch_compile: false
