@@ -1,7 +1,7 @@
 [
   {
     "id": "squat__side__standard__none__0016",
-    "image": "images/squat/squat__side__standard__none__0016.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__none__0016.jpg",
     "conversations": [
       {
         "from": "human",
@@ -16,11 +16,13 @@
     "view": "side",
     "sample_type": "standard",
     "error_type": "none",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__none__0016.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__none__0016.jpg"
+    ]
   },
   {
     "id": "squat__side__standard__forward_lean__0017",
-    "image": "images/squat/squat__side__standard__forward_lean__0017.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__forward_lean__0017.jpg",
     "conversations": [
       {
         "from": "human",
@@ -35,11 +37,13 @@
     "view": "side",
     "sample_type": "standard",
     "error_type": "forward_lean",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_knee_valgus_0012.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__forward_lean__0017.jpg"
+    ]
   },
   {
     "id": "squat__front__standard__knee_valgus__0018",
-    "image": "images/squat/squat__front__standard__knee_valgus__0018.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__front__standard__knee_valgus__0018.jpg",
     "conversations": [
       {
         "from": "human",
@@ -54,11 +58,13 @@
     "view": "front",
     "sample_type": "standard",
     "error_type": "knee_valgus",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_0005.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat__front__standard__knee_valgus__0018.jpg"
+    ]
   },
   {
     "id": "lunge__side__standard__none__0016",
-    "image": "images/lunge/lunge__side__standard__none__0016.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0016.jpg",
     "conversations": [
       {
         "from": "human",
@@ -73,11 +79,13 @@
     "view": "side",
     "sample_type": "standard",
     "error_type": "none",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_0004.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0016.jpg"
+    ]
   },
   {
     "id": "lunge__side__standard__knee_over_toes__0017",
-    "image": "images/lunge/lunge__side__standard__knee_over_toes__0017.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__knee_over_toes__0017.jpg",
     "conversations": [
       {
         "from": "human",
@@ -92,11 +100,13 @@
     "view": "side",
     "sample_type": "standard",
     "error_type": "knee_over_toes",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_butt_wink_0014.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__knee_over_toes__0017.jpg"
+    ]
   },
   {
     "id": "lunge__front__standard__pelvis_tilt__0018",
-    "image": "images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg",
     "conversations": [
       {
         "from": "human",
@@ -111,11 +121,13 @@
     "view": "front",
     "sample_type": "standard",
     "error_type": "pelvis_tilt",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_weight_back_0015.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg"
+    ]
   },
   {
     "id": "lat_raise__front__standard__none__0016",
-    "image": "images/lateral_raise/lateral_raise__front__standard__none__0016.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__front__standard__none__0016.jpg",
     "conversations": [
       {
         "from": "human",
@@ -130,11 +142,13 @@
     "view": "front",
     "sample_type": "standard",
     "error_type": "none",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_round_back_0006.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__front__standard__none__0016.jpg"
+    ]
   },
   {
     "id": "lat_raise__front__standard__shrug__0017",
-    "image": "images/lateral_raise/lateral_raise__front__standard__shrug__0017.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__front__standard__shrug__0017.jpg",
     "conversations": [
       {
         "from": "human",
@@ -149,11 +163,13 @@
     "view": "front",
     "sample_type": "standard",
     "error_type": "shrug",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_0003.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__front__standard__shrug__0017.jpg"
+    ]
   },
   {
     "id": "lat_raise__side__standard__low_height__0018",
-    "image": "images/lateral_raise/lateral_raise__side__standard__low_height__0018.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__side__standard__low_height__0018.jpg",
     "conversations": [
       {
         "from": "human",
@@ -168,6 +184,8 @@
     "view": "side",
     "sample_type": "standard",
     "error_type": "low_height",
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_0001.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__side__standard__low_height__0018.jpg"
+    ]
   }
 ]

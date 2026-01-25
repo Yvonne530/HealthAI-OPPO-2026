@@ -1,7 +1,7 @@
 [
   {
     "id": "lunge_side_standard_0001",
-    "image": "images/lunge/lunge__side__standard__none__0001.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0001.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "standard",
@@ -16,11 +16,13 @@
         "value": "【推理过程】：\n1. 检测下肢力线：侧观前后腿膝关节均呈 90 度夹角。\n2. 判定代偿：躯干垂直地面，脊柱中立，重心稳定分布。\n3. 解决策略：维持现有幅度，确保膝盖投影未超脚尖。\n\n【判定结果】：\n标准动作。力线理想，作为全体型训练基准。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__none__0016.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0001.jpg"
+    ]
   },
   {
     "id": "lunge_side_overweight_0002",
-    "image": "images/lunge/lunge__side__overweight__none__0002.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__overweight__none__0002.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "overweight",
@@ -35,11 +37,13 @@
         "value": "【推理过程】：\n1. 检测关键路径：排除脂肪轮廓干扰，聚焦髋膝踝深层力线。\n2. 判定代偿：重心落于双脚中部，躯干未因负重而前倾。\n3. 解决策略：维持垂直下蹲路径，确保关节受力均匀。\n\n【判定结果】：\n动作正确。已成功识别力线，不受大体型特征干扰。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_knee_valgus_0012.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__overweight__none__0002.jpg"
+    ]
   },
   {
     "id": "lunge_side_skinny_0003",
-    "image": "images/lunge/lunge__side__skinny__none__0003.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__skinny__none__0003.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "skinny",
@@ -54,11 +58,13 @@
         "value": "【推理过程】：\n1. 检测骨骼节点：节点特征清晰，前后腿杠杆力矩均匀。\n2. 判定代偿：脊柱曲线自然，无圆背或重心偏移。\n3. 解决策略：维持当前稳定度，作为关节定位学习样本。\n\n【判定结果】：\n标准动作。骨骼特征显著，适合用于关键节点学习。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_0005.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__skinny__none__0003.jpg"
+    ]
   },
   {
     "id": "lunge_side_senior_0004",
-    "image": "images/lunge/lunge__side__senior__none__0004.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__senior__none__0004.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "senior",
@@ -73,11 +79,13 @@
         "value": "【推理过程】：\n1. 检测活动度：虽体态略松弛，但主要关节力线保持连续。\n2. 判定代偿：未见明显晃动，重心控制符合高龄康复标准。\n3. 解决策略：引导在安全范围内训练，确保动作平稳。\n\n【判定结果】：\n高龄标准动作。力线稳定，符合安全训练范式。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_0004.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__senior__none__0004.jpg"
+    ]
   },
   {
     "id": "lunge_front_standard_0005",
-    "image": "images/lunge/lunge__front__standard__none__0005.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__front__standard__none__0005.jpg",
     "action": "lunge",
     "view": "front",
     "sample_type": "standard",
@@ -92,11 +100,13 @@
         "value": "【推理过程】：\n1. 检测正面轨迹：前膝中点与第二脚趾呈垂直对齐。\n2. 判定代偿：骨盆保持水平，无代偿性倾斜或旋转。\n3. 解决策略：维持髋外展肌群募集，防止力线折断。\n\n【判定结果】：\n正面标准动作。膝盖控制良好，成功规避内扣风险。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_butt_wink_0014.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__front__standard__none__0005.jpg"
+    ]
   },
   {
     "id": "lunge_side_skinny_round_back_0006",
-    "image": "images/lunge/lunge__side__skinny__round_back__0006.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__skinny__round_back__0006.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "skinny",
@@ -111,11 +121,13 @@
         "value": "【推理过程】：\n1. 检测脊柱形态：侧观胸腰椎呈明显弧形，失去中立位。\n2. 判定代偿：核心募集失效导致圆背，增加腰椎剪切力。\n3. 解决策略：引导收紧肩胛骨，重建躯干垂直刚性。\n\n【纠偏建议】：\n错误：圆背代偿。请挺直背部并收紧核心后再下蹲。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_weight_back_0015.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__skinny__round_back__0006.jpg"
+    ]
   },
   {
     "id": "lunge_side_overweight_round_back_0007",
-    "image": "images/lunge/lunge__side__overweight__round_back__0007.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__overweight__round_back__0007.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "overweight",
@@ -130,11 +142,13 @@
         "value": "【推理过程】：\n1. 检测躯干线：背部轮廓显示严重前屈，偏离垂直轴线。\n2. 判定代偿：核心控制不足导致圆背，重心显著前移。\n3. 解决策略：减少下蹲深度，专注维持脊柱中立位。\n\n【纠偏建议】：\n错误：圆背代偿。请减少下蹲深度，专注上半身直立。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_round_back_0006.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__overweight__round_back__0007.jpg"
+    ]
   },
   {
     "id": "lunge_side_standard_shallow_0008",
-    "image": "images/lunge/lunge__side__standard__shallow__0008.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__shallow__0008.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "standard",
@@ -149,11 +163,13 @@
         "value": "【推理过程】：\n1. 检测下蹲幅度：大腿与地面夹角过大，未达平行标准。\n2. 判定代偿：后膝屈曲不足，导致目标肌群募集率低下。\n3. 解决策略：在稳定前提下增加步幅，引导重心下沉。\n\n【纠偏建议】：\n错误：深度不足。请增加步幅，让后膝更接近地面。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_0003.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__shallow__0008.jpg"
+    ]
   },
   {
     "id": "lunge_side_senior_shallow_0009",
-    "image": "images/lunge/lunge__side__senior__low_height__0009.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__senior__low_height__0009.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "senior",
@@ -168,11 +184,13 @@
         "value": "【推理过程】：\n1. 检测功能范围：深度受限于高龄关节活动度退化。\n2. 判定代偿：未见危险力线扭转，重心控制极其稳定。\n3. 解决策略：维持现有无痛范围训练，可辅以手部扶持。\n\n【判定结果】：\n功能性受限（非错误）。符合高龄康复安全标准。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_0001.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__senior__low_height__0009.jpg"
+    ]
   },
   {
     "id": "lunge_side_standard_back_leg_straight_0010",
-    "image": "images/lunge/lunge__side__standard__none__0010.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0010.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "standard",
@@ -187,11 +205,13 @@
         "value": "【推理过程】：\n1. 检测后腿状态：后侧膝关节未向下压，呈现出代偿性伸直状态。\n2. 判定代偿：髂腰肌过紧或屈膝意识不足，导致重心配比失衡。\n3. 解决策略：引导后侧膝盖垂直指向地面并主动屈曲。\n\n【纠偏建议】：\n错误：后腿代偿。请主动弯曲后腿膝盖，向地面方向垂直下压。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_shallow_0009.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0010.jpg"
+    ]
   },
   {
     "id": "lunge_side_standard_heel_off_0011",
-    "image": "images/lunge/lunge__side__standard__heel_off__0011.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__heel_off__0011.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "standard",
@@ -206,11 +226,13 @@
         "value": "【推理过程】：\n1. 检测前脚支撑：观测到前脚后跟离开地面，压力集中于前掌。\n2. 判定代偿：重心过度前移造成踝部力线断裂，膝关节压强激增。\n3. 解决策略：引导重心回调，确保全脚掌踩实地平面。\n\n【纠偏建议】：\n错误：重心过载。请确保前脚跟踩死地面，重心维持在双腿中间。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_overweight_round_back_0007.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__heel_off__0011.jpg"
+    ]
   },
   {
     "id": "lunge_front_standard_knee_valgus_0012",
-    "image": "images/lunge/lunge_front_standard_knee_valgus_0012.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_front_standard_knee_valgus_0012.jpg",
     "action": "lunge",
     "view": "front",
     "sample_type": "standard",
@@ -225,11 +247,13 @@
         "value": "【推理过程】：\n1. 检测：正面观前腿膝盖向内侧偏移，偏离第二脚趾对齐线。\n2. 判定：典型膝内扣现象，髋外展肌群募集不足导致力线折断。\n3. 策略：主动激活臀中肌，引导膝盖向外推至脚尖方向。\n\n【纠偏建议】：\n错误：膝内扣。请将膝盖向外推，始终保持对齐脚尖。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__front__standard__knee_valgus__0018.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_front_standard_knee_valgus_0012.jpg"
+    ]
   },
   {
     "id": "lunge_front_standard_pelvis_tilt_0013",
-    "image": "images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg",
     "action": "lunge",
     "view": "front",
     "sample_type": "standard",
@@ -244,11 +268,13 @@
         "value": "【推理过程】：\n1. 检测盆骨水平：正面观测到骨盆两侧高度不一，出现侧倾或歪斜。\n2. 判定代偿：内收肌群或臀中肌失衡，导致骨盆动态稳定性丧失。\n3. 解决策略：引导骨盆保持水平，稳定双髋重心。\n\n【纠偏建议】：\n错误：盆骨歪斜。请保持骨盆水平稳定，避免身体向一侧倾斜。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat__side__standard__forward_lean__0017.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__front__standard__pelvis_tilt__0018.jpg"
+    ]
   },
   {
     "id": "lunge_side_standard_back_foot_out_0014",
-    "image": "images/lunge/lunge_side_standard_back_foot_out_0014.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_side_standard_back_foot_out_0014.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "standard",
@@ -263,11 +289,13 @@
         "value": "【推理过程】：\n1. 检测后脚指向：后脚跟向内塌陷，脚尖明显向外撇开。\n2. 判定代偿：髋内旋受限或足踝稳定性不足导致力线扭转。\n3. 解决策略：校正后脚方向，确保脚尖与膝盖指向正前方。\n\n【纠偏建议】：\n错误：后腿外撇。请将后脚跟保持立起，脚尖正对前方。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_shallow_0008.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_side_standard_back_foot_out_0014.jpg"
+    ]
   },
   {
     "id": "lunge_side_standard_lower_back_arch_0015",
-    "image": "images/lunge/lunge_side_standard_lower_back_arch_0015.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_side_standard_lower_back_arch_0015.jpg",
     "action": "lunge",
     "view": "side",
     "sample_type": "standard",
@@ -282,11 +310,13 @@
         "value": "【推理过程】：\n1. 检测脊柱曲度：后腰部过度向内挤压，骨盆出现明显前倾。\n2. 判定代偿：腰椎过伸（Overextension）代偿，核心抗伸展能力失效。\n3. 解决策略：引导收紧核心，恢复骨盆中立位，减轻腰椎压力。\n\n【纠偏建议】：\n错误：过度伸展。请收紧腹部，避免后腰塌陷或过度挤压。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_heel_lift_0010.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_side_standard_lower_back_arch_0015.jpg"
+    ]
   },
   {
     "id": "latraise_front_standard_0001",
-    "image": "images/lateral_raise/lateral_raise_front_standard_0001.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_0001.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "standard",
@@ -301,11 +331,13 @@
         "value": "【推理过程】：\n  1. 检测：正面观大臂抬至水平，与肩呈一直线。\n  2. 判定：斜方肌稳定，无明显耸肩或颈部缩短。\n  3. 策略：维持当前高度与节奏，确保中束受力。\n\n【判定结果】：\n标准动作。基准锚点正确，动作轨迹稳定。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_overweight_knee_valgus_0013.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_0001.jpg"
+    ]
   },
   {
     "id": "latraise_front_overweight_0002",
-    "image": "images/lateral_raise/lateral_raise_front_overweight_0002.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_overweight_0002.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "overweight",
@@ -320,11 +352,13 @@
         "value": "【推理过程】：\n  1. 检测：正面观大臂水平抬升，排除体型干扰力线清晰。\n  2. 判定：重心稳定，无体重负载导致的躯干晃动代偿。\n  3. 策略：维持垂直路径与高度，三角肌中束主导发力。\n\n【判定结果】：\n标准动作。正面基准正确，体型不影响力线判定。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_overweight_0002.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_overweight_0002.jpg"
+    ]
   },
   {
     "id": "latraise_front_skinny_0003",
-    "image": "images/lateral_raise/lateral_raise_front_skinny_0003.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_skinny_0003.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "skinny",
@@ -339,11 +373,13 @@
         "value": "【推理过程】：\n  1. 检测：骨骼节点特征清晰，大臂完全达到水平位。\n  2. 判定：斜方肌原位无上提，三角肌募集路径纯粹。\n  3. 策略：维持现有力线，作为高精度节点学习样本。\n\n【判定结果】：\n标准动作。关节对齐与抬升高度符合标准。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_forward_lean_0011.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_skinny_0003.jpg"
+    ]
   },
   {
     "id": "latraise_front_senior_0004",
-    "image": "images/lateral_raise/lateral_raise_front_senior_0004.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_senior_0004.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "senior",
@@ -358,11 +394,13 @@
         "value": "【推理过程】：\n  1. 检测：观测大臂抬至适度高度，排除体态松弛干扰。\n  2. 判定：轨迹稳定，无明显耸肩或重心晃动代偿。\n  3. 策略：维持安全范围内活动，确保关节稳定度。\n\n【判定结果】：\n高龄标准动作。轨迹稳定，符合适度训练基准。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__side__standard__low_height__0018.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_senior_0004.jpg"
+    ]
   },
   {
     "id": "latraise_side_standard_0005",
-    "image": "images/lateral_raise/lateral_raise_side_standard_0005.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_0005.jpg",
     "action": "lateral_raise",
     "view": "side",
     "sample_type": "standard",
@@ -377,11 +415,13 @@
         "value": "【推理过程】：\n  1. 检测：侧观手臂位于肩胛面，与躯干呈微小夹角。\n  2. 判定：脊柱中立，重心垂直足中，无前后偏移代偿。\n  3. 策略：维持功能平面轨迹，确保护肩关节稳定。\n\n【判定结果】：\n标准动作。侧向轨迹理想，符合肩胛面运动生理。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_overweight_shrug_0013.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_0005.jpg"
+    ]
   },
   {
     "id": "latraise_front_skinny_shrug_0006",
-    "image": "images/lateral_raise/lateral_raise_front_skinny_shrug_0006.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_skinny_shrug_0006.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "skinny",
@@ -396,11 +436,13 @@
         "value": "【推理过程】：\n  1. 检测：正面观斜方肌大幅上提，颈部视觉缩短。\n  2. 判定：三角肌募集不足导致耸肩代偿，应力集中于斜方肌。\n  3. 策略：下压肩胛骨，意识性沉肩减少斜方肌参与。\n\n【纠偏建议】：\n错误：耸肩代偿。请下压肩膀，避免脖子发力缩短。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_low_height_0007.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_skinny_shrug_0006.jpg"
+    ]
   },
   {
     "id": "latraise_front_standard_low_height_0007",
-    "image": "images/lateral_raise/lateral_raise_front_standard_low_height_0007.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_low_height_0007.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "standard",
@@ -415,11 +457,13 @@
         "value": "【推理过程】：\n  1. 检测：正面观大臂未达水平高度，与躯干夹角过小。\n  2. 判定：抬升幅度不足，导致三角肌中束未充分刺激。\n  3. 策略：增加抬升高度，确保大臂与肩部几乎平行。\n\n【纠偏建议】：\n错误：高度不足。请加大动作幅度，大臂抬至水平位。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_skinny_0003.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_low_height_0007.jpg"
+    ]
   },
   {
     "id": "latraise_front_standard_too_high_0008",
-    "image": "images/lateral_raise/lateral_raise_front_standard_too_high_0008.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_too_high_0008.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "standard",
@@ -434,11 +478,13 @@
         "value": "【推理过程】：\n  1. 检测：哑铃高度超过头顶，大臂抬升远超水平线。\n  2. 判定：过高幅度增加肩峰撞击风险，损害关节健康。\n  3. 策略：限制抬升终点，确保哑铃不高过肩部水平。\n\n【纠偏建议】：\n错误：高度过高。请控制幅度，哑铃不要高过头顶。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_low_elbow_0012.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_too_high_0008.jpg"
+    ]
   },
   {
     "id": "latraise_front_senior_unstable_0009",
-    "image": "images/lateral_raise/lateral_raise_front_senior_unstable_0009.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_senior_unstable_0009.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "senior",
@@ -453,11 +499,13 @@
         "value": "【推理过程】：\n  1. 检测：高龄受试者动作晃动，大臂抬升高度不对称。\n  2. 判定：核心控制力弱导致重心代偿，伴随轻微耸肩。\n  3. 策略：降低配重或坐姿训练，重建重心稳定性。\n\n【纠偏建议】：\n错误：稳定性差。请减小幅度，优先维持躯干稳定。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_overweight_0002.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_senior_unstable_0009.jpg"
+    ]
   },
   {
     "id": "latraise_front_standard_wrist_bend_0010",
-    "image": "images/lateral_raise/lateral_raise_front_standard_wrist_bend_0010.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_wrist_bend_0010.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "standard",
@@ -472,11 +520,13 @@
         "value": "【推理过程】：\n  1. 检测：手腕发生折断弯曲，哑铃与小臂力线不连续。\n  2. 判定：前臂肌群控制失效，增加腕关节受伤风险。\n  3. 策略：维持手腕中立位，确保力量传导线路连续。\n\n【纠偏建议】：\n错误：手腕折断。请保持手腕挺直，与小臂呈一直线。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_torso_swing_0011.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_wrist_bend_0010.jpg"
+    ]
   },
   {
     "id": "latraise_side_standard_torso_swing_0011",
-    "image": "images/lateral_raise/lateral_raise_side_standard_torso_swing_0011.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_torso_swing_0011.jpg",
     "action": "lateral_raise",
     "view": "side",
     "sample_type": "standard",
@@ -491,11 +541,13 @@
         "value": "【推理过程】：\n  1. 检测：侧观躯干大幅前后晃动，偏离垂直中心线。\n  2. 判定：利用腰部摆动惯性甩动重量，核心稳定性丧失。\n  3. 策略：收紧核心固定躯干，仅依靠肩部肌肉发力。\n\n【纠偏建议】：\n错误：躯干晃动。请固定身体，禁止利用腰部力量。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_senior_0004.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_torso_swing_0011.jpg"
+    ]
   },
   {
     "id": "latraise_front_standard_low_elbow_0012",
-    "image": "images/lateral_raise/lateral_raise_front_standard_low_elbow_0012.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_low_elbow_0012.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "standard",
@@ -510,11 +562,13 @@
         "value": "【推理过程】：\n  1. 检测：正面观肘部明显低于手腕，呈\"提水桶\"状。\n  2. 判定：发力点偏移，导致三角肌募集效率显著下降。\n  3. 策略：肘部优先带动，确保肘点不低于手腕水平。\n\n【纠偏建议】：\n错误：肘部过低。请肘部带动向上，避免手腕过高。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_0005.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_low_elbow_0012.jpg"
+    ]
   },
   {
     "id": "latraise_front_overweight_shrug_0013",
-    "image": "images/lateral_raise/lateral_raise_front_overweight_shrug_0013.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_overweight_shrug_0013.jpg",
     "action": "lateral_raise",
     "view": "front",
     "sample_type": "overweight",
@@ -529,11 +583,13 @@
         "value": "【推理过程】：\n  1. 检测：颈部脂肪与肩部肌肉上提导致视觉挤压连线。\n  2. 判定：典型耸肩代偿，斜方肌过度参与抬臂动作。\n  3. 策略：放松颈部，下压肩胛骨以恢复动作轨迹。\n\n【纠偏建议】：\n错误：耸肩代偿。请下压肩膀，专注肩部而非脖子发力。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_0001.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_overweight_shrug_0013.jpg"
+    ]
   },
   {
     "id": "latraise_side_standard_arm_back_0014",
-    "image": "images/lateral_raise/lateral_raise_side_standard_arm_back_0014.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_arm_back_0014.jpg",
     "action": "lateral_raise",
     "view": "side",
     "sample_type": "standard",
@@ -548,11 +604,13 @@
         "value": "【推理过程】：\n  1. 检测：侧观手臂力线后偏，完全位于躯干背后平面。\n  2. 判定：超出生理活动范围，增加肩关节囊前侧压力。\n  3. 策略：手臂微移向身体前方（肩胛面30度角）。\n\n【纠偏建议】：\n错误：力线后偏。请将手臂微移向前方，不要在背后。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_too_high_0008.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_arm_back_0014.jpg"
+    ]
   },
   {
     "id": "latraise_side_standard_round_back_0015",
-    "image": "images/lateral_raise/lateral_raise_side_standard_round_back_0015.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_round_back_0015.jpg",
     "action": "lateral_raise",
     "view": "side",
     "sample_type": "standard",
@@ -567,11 +625,13 @@
         "value": "【推理过程】：\n  1. 检测：侧观胸椎明显后突，呈现含胸拔背体态。\n  2. 判定：圆背限制肩胛活动范围，降低三角肌募集效率。\n  3. 策略：微挺胸部，收紧背部核心以恢复脊柱中立。\n\n【纠偏建议】：\n错误：圆背代偿。请保持胸部微挺，避免含胸限制轨迹。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_standard_wrist_bend_0010.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_round_back_0015.jpg"
+    ]
   },
   {
     "id": "squat_side_standard_0001",
-    "image": "images/squat/squat_side_standard_0001.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_0001.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "standard",
@@ -586,11 +646,13 @@
         "value": "【推理过程】:\n1. 侧面观察髋、膝、踝三点形成稳定垂直力线。\n2. 躯干基本垂直,脊柱保持中立。\n3. 大腿下降至接近平行地面。\n【判定结果】:\n标准深蹲,作为全体型基准锚点。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__front__standard__shrug__0017.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_0001.jpg"
+    ]
   },
   {
     "id": "squat_side_overweight_0002",
-    "image": "images/squat/squat_side_overweight_0002.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_overweight_0002.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "overweight",
@@ -605,11 +667,13 @@
         "value": "【推理过程】:\n1. 排除腹部脂肪轮廓干扰,聚焦髋膝踝相对位置。\n2. 重心落于足中部。\n3. 下蹲深度符合标准。\n【判定结果】:\n动作正确,模型需学会忽略脂肪外形。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_senior_unstable_0009.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_overweight_0002.jpg"
+    ]
   },
   {
     "id": "squat_side_skinny_0003",
-    "image": "images/squat/squat_side_skinny_0003.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_0003.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "skinny",
@@ -624,11 +688,13 @@
         "value": "【推理过程】:\n1. 骨骼节点清晰,髋膝踝对齐。\n2. 膝关节未过度前移。\n3. 脊柱曲线自然。\n【判定结果】:\n适用于关节节点学习的标准样本。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_arm_back_0014.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_0003.jpg"
+    ]
   },
   {
     "id": "squat_side_senior_0004",
-    "image": "images/squat/squat_side_senior_0004.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_0004.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "senior",
@@ -643,11 +709,13 @@
         "value": "【推理过程】:\n1. 虽体态略松弛,但力线保持稳定。\n2. 髋膝协同屈曲,未出现代偿。\n3. 绿线显示高龄可接受标准力线。\n【判定结果】:\n定义高龄族群的标准深蹲。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_front_skinny_shrug_0006.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_0004.jpg"
+    ]
   },
   {
     "id": "squat_front_standard_0005",
-    "image": "images/squat/squat_front_standard_0005.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_0005.jpg",
     "action": "squat",
     "view": "front",
     "sample_type": "standard",
@@ -662,11 +730,13 @@
         "value": "【推理过程】:\n1. 正面观察双膝运动轨迹。\n2. 膝盖与脚尖方向一致。\n3. 无内扣或外翻。\n【判定结果】:\n正面基准深蹲,膝盖控制良好。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise_side_standard_round_back_0015.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_0005.jpg"
+    ]
   },
   {
     "id": "squat_side_skinny_round_back_0006",
-    "image": "images/squat/squat_side_skinny_round_back_0006.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_round_back_0006.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "skinny",
@@ -681,11 +751,13 @@
         "value": "【推理过程】:\n1. 脊柱呈明显弧形,失去中立位。\n2. 骨感体型使圆背更加明显。\n3. 髋部活动不足导致代偿。\n【纠偏建议】:\n请先建立髋关节屈曲能力,保持背部挺直再下蹲。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lateral_raise/lateral_raise__front__standard__none__0016.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_round_back_0006.jpg"
+    ]
   },
   {
     "id": "squat_side_overweight_round_back_0007",
-    "image": "images/squat/squat_side_overweight_round_back_0007.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_overweight_round_back_0007.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "overweight",
@@ -700,11 +772,13 @@
         "value": "【推理过程】:\n1. 骨骼不易直接观察,改以背部轮廓判断。\n2. 出现明显前屈圆背。\n3. 核心控制不足。\n【纠偏建议】:\n请减少深度,专注脊柱中立控制。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__none__0010.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_overweight_round_back_0007.jpg"
+    ]
   },
   {
     "id": "squat_side_standard_shallow_0008",
-    "image": "images/squat/squat_side_standard_shallow_0008.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_shallow_0008.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "standard",
@@ -719,11 +793,13 @@
         "value": "【推理过程】:\n1. 大腿未达平行地面。\n2. 髋关节屈曲不足。\n3. 无其他代偿但深度不够。\n【纠偏建议】:\n请放慢节奏,增加下蹲深度。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__senior__none__0004.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_shallow_0008.jpg"
+    ]
   },
   {
     "id": "squat_side_senior_shallow_0009",
-    "image": "images/squat/squat_side_senior_shallow_0009.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_shallow_0009.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "senior",
@@ -738,11 +814,13 @@
         "value": "【推理过程】:\n1. 深度不足主要来自关节活动度限制。\n2. 未见明显危险代偿。\n3. 属能力受限型错误。\n【纠偏建议】:\n可使用辅助物或缩小动作幅度。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__back__standard__none__0013.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_senior_shallow_0009.jpg"
+    ]
   },
   {
     "id": "squat_side_skinny_heel_lift_0010",
-    "image": "images/squat/squat_side_skinny_heel_lift_0010.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_heel_lift_0010.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "skinny",
@@ -757,11 +835,13 @@
         "value": "【推理过程】:\n1. 脚本脚后跟明显抬起。\n2. 重心前移至前脚掌。\n3. 踝关节活动受限。\n【纠偏建议】:\n请尝试脚跟稳定训练或调整站距。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_front_standard_knee_valgus_0012.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_skinny_heel_lift_0010.jpg"
+    ]
   },
   {
     "id": "squat_side_standard_forward_lean_0011",
-    "image": "images/squat/squat_side_standard_forward_lean_0011.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_forward_lean_0011.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "standard",
@@ -776,11 +856,13 @@
         "value": "【推理过程】:\n1. 躯干过度前倾。\n2. 红线显示重心偏离足中。\n3. 髋部与核心协调不足。\n【纠偏建议】:\n请想象垂直下坐,避免向前折叠。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__skinny__none__0003.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_forward_lean_0011.jpg"
+    ]
   },
   {
     "id": "squat_front_standard_knee_valgus_0012",
-    "image": "images/squat/squat_front_standard_knee_valgus_0012.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_knee_valgus_0012.jpg",
     "action": "squat",
     "view": "front",
     "sample_type": "standard",
@@ -795,11 +877,13 @@
         "value": "【推理过程】:\n1. 正面观察双膝向中线靠拢。\n2. 髋外展控制不足。\n3. 属膝内扣典型代偿。\n【纠偏建议】:\n请加强臀中肌启动。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__skinny__round_back__0006.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_standard_knee_valgus_0012.jpg"
+    ]
   },
   {
     "id": "squat_front_overweight_knee_valgus_0013",
-    "image": "images/squat/squat_front_overweight_knee_valgus_0013.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_overweight_knee_valgus_0013.jpg",
     "action": "squat",
     "view": "front",
     "sample_type": "overweight",
@@ -814,11 +898,13 @@
         "value": "【推理过程】:\n1. 体型较大但仍可见膝内扣趋势。\n2. 盆骨稳定性不足。\n3. 属常见代偿型错误。\n【纠偏建议】:\n请控制下降速度并维持膝外推意识。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_side_standard_lower_back_arch_0015.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_front_overweight_knee_valgus_0013.jpg"
+    ]
   },
   {
     "id": "squat_side_standard_butt_wink_0014",
-    "image": "images/squat/squat_side_standard_butt_wink_0014.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_butt_wink_0014.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "standard",
@@ -833,11 +919,13 @@
         "value": "【推理过程】:\n1. 下蹲底部出现骨盆后倾。\n2. 腰椎失去中立位。\n3. 属 Butt Wink 现象。\n【纠偏建议】:\n请限制下蹲深度于骨盆控制范围内。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge_side_standard_back_foot_out_0014.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_butt_wink_0014.jpg"
+    ]
   },
   {
     "id": "squat_side_standard_weight_back_0015",
-    "image": "images/squat/squat_side_standard_weight_back_0015.jpg",
+    "image": "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_weight_back_0015.jpg",
     "action": "squat",
     "view": "side",
     "sample_type": "standard",
@@ -852,6 +940,8 @@
         "value": "【推理过程】:\n1. 重心后移,脚尖翘起。\n2. 平衡能力不足。\n3. 存在跌倒风险。\n【纠偏建议】:\n请将重心调回足中,保持脚掌完全贴地。"
       }
     ],
-    "images": "/kaggle/input/fitness-rehab-vlm/images/lunge/lunge__side__standard__heel_off__0011.jpg"
+    "images": [
+      "/kaggle/input/fitness-rehab-vlm/images/squat/squat_side_standard_weight_back_0015.jpg"
+    ]
   }
 ]
