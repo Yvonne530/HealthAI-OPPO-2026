@@ -1,27 +1,28 @@
 ### ============================================================
-### Qwen2-VL-7B 医疗助手微调配置 (T4×2 GPU 优化 - 每卡16GB)
+### Qwen2-VL-7B 医疗助手微调配置 (T4×2 GPU 优化 - 已修复参数错误)
 ### ============================================================
 
 ### 模型配置
 model_name_or_path: Qwen/Qwen2-VL-7B-Instruct
 template: qwen2_vl
-visual_inputs: true  # Qwen2-VL 官方标准参数
+# 已移除 visual_inputs (框架根据 template 自动识别)
 
 ### 数据配置
 dataset: rehab_train
-val_dataset: rehab_val
-cutoff_len: 2048                        # 16GB 显存必须降低序列长度（4096→2048）
+# 已将 val_dataset 修改为 val_size，避免路径/参数名解析错误
+val_size: 0.1
+cutoff_len: 2048
 max_samples: 1000000
-preprocessing_num_workers: 4            # 降低 CPU 并发
+preprocessing_num_workers: 2
 
-### LoRA 配置（16GB 显存优化）
+### LoRA 配置（16GB 显存极限优化）
 finetuning_type: lora
-lora_rank: 16                           # 降低秩（32→16）节省显存
-lora_alpha: 32                          # 对应调整（64→32）
+lora_rank: 16
+lora_alpha: 32
 lora_dropout: 0.05
-lora_target: all  # 自动覆盖视觉+语言模块
+lora_target: all
 create_new_adapter: false
-modules_to_save: [vision_tower, multi_modal_projector] 
+# 已移除 modules_to_save: [] (LoRA模式下传空列表易报错)
 
 ### 训练参数
 num_train_epochs: 3
@@ -31,52 +32,42 @@ warmup_ratio: 0.1
 weight_decay: 0.01
 max_grad_norm: 1.0
 
-### 显存优化策略（T4×2 16GB 极限配置）
-# T4 单卡仅 16GB 显存，必须极限优化
-per_device_train_batch_size: 1          # 最小值
-gradient_accumulation_steps: 16         # 等效 batch_size=32 (1×2卡×16步)
-gradient_checkpointing: true            # 必须开启！节省 30%+ 显存
-bf16: false                             # T4 不支持 BF16
-fp16: true                              # T4 使用 FP16 混合精度
-optim: adamw_8bit                       # 使用 8bit 优化器节省显存
+### 显存优化策略（T4×2 16GB 关键配置）
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+gradient_checkpointing: true
+bf16: false
+fp16: true
+optim: adamw_8bit
 ddp_find_unused_parameters: false
 
-### 分布式训练配置
-fsdp: []
-deepspeed: null
-
-### 评估配置（降低频率节省时间和显存）
+### 评估配置
 per_device_eval_batch_size: 1
 eval_strategy: steps
-eval_steps: 200                         # 减少评估频率（100→200）
+eval_steps: 200
 save_strategy: steps
 save_steps: 200
 load_best_model_at_end: false
 
-### 磁盘保护
-output_dir: /kaggle/working/rehab_lora
-save_total_limit: 1                     # 只保留最新检查点
-logging_dir: /kaggle/working/rehab_lora/logs
-logging_steps: 20                       # 降低日志频率
+### 视觉 token 限制 (针对 Qwen2-VL 的核心显存保护)
+# 已移除 qwen2_vl_max_pixels (部分版本不识别)
+# 使用通用的 vllm_maxlen 来限制视觉序列长度，防止 OOM
+vllm_maxlen: 1024
 
-### 其他配置
+### 输出与监控
+output_dir: /kaggle/working/rehab_lora
+save_total_limit: 1
+logging_dir: /kaggle/working/rehab_lora/logs
+logging_steps: 10
 overwrite_output_dir: true
-ddp_timeout: 7200                       # T4 训练较慢，增加超时时间
+ddp_timeout: 7200
 report_to: none
 save_safetensors: true
 include_num_input_tokens_seen: true
 
-### 随机种子
+### 其他优化
 seed: 42
 data_seed: 42
-
-### 推理配置
-do_sample: false
-temperature: 1.0
-top_p: 1.0
-
-### T4 16GB 极限优化
-dataloader_num_workers: 2               # 降低 CPU 开销（4→2）
-dataloader_pin_memory: false            # 禁用 pin_memory 节省显存
-torch_compile: false                    # T4 不建议使用编译加速
-max_length: 2048                        # 强制最大长度限制
+dataloader_num_workers: 2
+dataloader_pin_memory: false
+torch_compile: false

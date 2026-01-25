@@ -5,13 +5,15 @@
 # ============================================================
 #
 # 环境变量控制（适用于 Kaggle 非交互式环境）：
+#   SMOKE_TEST=1    - 冒烟测试：单卡、4 步即停，跳过导出
 #   SKIP_TRAIN=1    - 跳过训练步骤
 #   SKIP_EXPORT=1   - 跳过导出与量化步骤
 #
 # 使用示例：
-#   bash run_all.sh                    # 执行全部流程
-#   SKIP_TRAIN=1 bash run_all.sh       # 跳过训练，只导出
-#   SKIP_EXPORT=1 bash run_all.sh      # 只训练，不导出
+#   bash run_all.sh                      # 执行全部流程
+#   SMOKE_TEST=1 bash run_all.sh         # 冒烟测试（单卡 4 步，不导出）
+#   SKIP_TRAIN=1 bash run_all.sh         # 跳过训练，只导出
+#   SKIP_EXPORT=1 bash run_all.sh        # 只训练，不导出
 # ============================================================
 
 set -e  # 遇到错误立即停止
@@ -30,6 +32,7 @@ echo -e "${NC}"
 
 # 显示当前配置
 echo "执行配置："
+echo "  SMOKE_TEST=${SMOKE_TEST:-0} (设为 1 冒烟测试：单卡 4 步，不导出)"
 echo "  SKIP_TRAIN=${SKIP_TRAIN:-0} (设为 1 跳过训练)"
 echo "  SKIP_EXPORT=${SKIP_EXPORT:-0} (设为 1 跳过导出)"
 echo ""
@@ -49,9 +52,9 @@ echo ""
 echo -e "${GREEN}[步骤 2/3] 开始训练${NC}"
 echo "----------------------------------------"
 
-# 使用环境变量控制是否跳过训练
+# 冒烟测试时传递 SMOKE_TEST，train.sh 会单卡 + 4 步
 if [[ "${SKIP_TRAIN:-0}" != "1" ]]; then
-    bash /kaggle/working/train.sh
+    SMOKE_TEST="${SMOKE_TEST:-0}" bash /kaggle/working/train.sh
 else
     echo "⊙ 跳过训练步骤 (SKIP_TRAIN=1)"
 fi
@@ -61,11 +64,15 @@ echo ""
 echo -e "${GREEN}[步骤 3/3] 导出与量化${NC}"
 echo "----------------------------------------"
 
-# 使用环境变量控制是否跳过导出
-if [[ "${SKIP_EXPORT:-0}" != "1" ]]; then
-    bash /kaggle/working/export_and_quantize.sh
+# 冒烟测试不导出；SKIP_EXPORT=1 也跳过
+if [[ "${SMOKE_TEST:-0}" = "1" ]] || [[ "${SKIP_EXPORT:-0}" = "1" ]]; then
+    if [[ "${SMOKE_TEST:-0}" = "1" ]]; then
+        echo "⊙ 冒烟测试模式，跳过导出 (SMOKE_TEST=1)"
+    else
+        echo "⊙ 跳过导出步骤 (SKIP_EXPORT=1)"
+    fi
 else
-    echo "⊙ 跳过导出步骤 (SKIP_EXPORT=1)"
+    bash /kaggle/working/export_and_quantize.sh
 fi
 echo ""
 

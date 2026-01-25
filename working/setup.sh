@@ -124,43 +124,10 @@ python /kaggle/working/preprocess_data.py
 
 echo "✓ 数据预处理完成"
 
-# ========== 6. 创建训练配置 ==========
-echo "[6/6] 创建训练配置文件..."
+# ========== 6. 导出配置 ==========
+echo "[6/6] 创建导出配置..."
 
-# ========== 6. 创建训练配置 (针对 16GB 显存优化) ==========
-cat > /kaggle/working/train_config.yaml << 'EOF'
-model_name_or_path: Qwen/Qwen2-VL-7B-Instruct
-template: qwen2_vl
-dataset: rehab_train
-val_size: 0.1
-cutoff_len: 2048
-max_samples: 1000000
-preprocessing_num_workers: 4
-finetuning_type: lora
-lora_rank: 16
-lora_alpha: 32
-lora_dropout: 0.05
-lora_target: all
-num_train_epochs: 3
-learning_rate: 1.0e-4
-lr_scheduler_type: cosine
-warmup_ratio: 0.1
-per_device_train_batch_size: 1
-gradient_accumulation_steps: 16
-gradient_checkpointing: true
-fp16: true
-bf16: false
-optim: adamw_bnb_8bit
-save_strategy: steps
-save_steps: 200
-save_total_limit: 1
-output_dir: /kaggle/working/rehab_lora
-overwrite_output_dir: true
-qwen2_vl_max_pixels: 301056
-logging_steps: 10
-report_to: none
-EOF
-# ========== 7. 创建导出配置 ==========
+# 使用 repo 内 train_config.yaml / train_config_smoke.yaml，不覆盖
 cat > /kaggle/working/export_config.yaml << 'EOF'
 model_name_or_path: Qwen/Qwen2-VL-7B-Instruct
 adapter_name_or_path: /kaggle/working/rehab_lora
@@ -172,9 +139,7 @@ export_device: cpu
 export_legacy_format: false
 EOF
 
-echo "✓ 配置文件已创建完成"
-
-echo "✓ 导出配置文件已创建: export_config.yaml"
+echo "✓ 导出配置已创建: export_config.yaml"
 
 echo ""
 echo "=========================================="
@@ -199,6 +164,7 @@ echo "  • 已启用 8bit 优化器"
 echo "  • 如仍 OOM，可进一步降低 cutoff_len 至 1024"
 echo ""
 echo "下一步操作："
-echo "  1. 运行训练: bash train.sh"
-echo "  2. 导出模型: bash export_and_quantize.sh"
+echo "  1. 冒烟测试: SMOKE_TEST=1 bash train.sh   # 单卡 4 步，验证流程"
+echo "  2. 正式训练: bash train.sh"
+echo "  3. 导出模型: bash export_and_quantize.sh"
 echo ""
