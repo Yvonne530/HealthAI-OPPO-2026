@@ -21,6 +21,7 @@ lora_alpha: 32                          # 对应调整（64→32）
 lora_dropout: 0.05
 lora_target: all  # 自动覆盖视觉+语言模块
 create_new_adapter: false
+modules_to_save: [vision_tower, multi_modal_projector] 
 
 ### 训练参数
 num_train_epochs: 3
