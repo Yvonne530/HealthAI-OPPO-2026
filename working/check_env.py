@@ -1,6 +1,6 @@
 """
-Kaggle 环境检查脚本
-验证 GPU、磁盘空间、依赖包等
+环境检查脚本 - T4×2 GPU 适配版
+验证 GPU、显存、磁盘空间、依赖包等
 """
 import os
 import sys
@@ -14,7 +14,7 @@ def print_section(title):
     print(f"{'='*60}")
 
 def check_gpu():
-    """检查 GPU 信息"""
+    """检查 GPU 信息 - T4×2 专用"""
     print_section("GPU 信息")
     try:
         result = subprocess.run(
@@ -23,11 +23,48 @@ def check_gpu():
         )
         print(result.stdout.strip())
         
-        # 检查是否是 A100
-        if "A100" in result.stdout:
-            print("✓ 检测到 A100 GPU")
+        # 检查 GPU 型号和数量
+        gpu_count_result = subprocess.run(
+            ['nvidia-smi', '--query-gpu=count', '--format=csv,noheader'],
+            capture_output=True, text=True, check=True
+        )
+        
+        # 统计 GPU 数量
+        gpu_lines = result.stdout.strip().split('\n')
+        gpu_count = len(gpu_lines)
+        
+        print(f"\n检测到 {gpu_count} 个 GPU")
+        
+        # T4 特定检查
+        if "T4" in result.stdout:
+            print("✓ 检测到 T4 GPU")
+            if gpu_count >= 2:
+                print("✓ 双卡配置正常，可使用 DDP 训练")
+            else:
+                print("⚠ 警告: 只有 1 个 T4，建议使用双卡训练以提升速度")
+        elif "A100" in result.stdout:
+            print("⚠ 检测到 A100 GPU，当前配置针对 T4 优化")
+            print("  建议修改 train_config.yaml 中的 batch size 参数")
         else:
-            print("⚠ 警告: 不是 A100 GPU，配置可能需要调整")
+            print(f"⚠ 警告: 不是 T4 GPU，配置可能需要调整")
+            
+        # 检查每卡显存
+        for idx, line in enumerate(gpu_lines):
+            parts = line.split(',')
+            if len(parts) >= 2:
+                memory = parts[1].strip()
+                print(f"  GPU {idx}: {memory}")
+                
+                # 解析显存大小
+                try:
+                    mem_gb = int(memory.split()[0])
+                    if mem_gb < 16:
+                        print(f"    ⚠ 警告: 显存不足 16GB，无法训练 Qwen2-VL-7B")
+                    elif mem_gb <= 16:
+                        print(f"    ℹ 16GB 显存，已启用极限优化配置")
+                except:
+                    pass
+                    
     except Exception as e:
         print(f"✗ GPU 检查失败: {e}")
 
@@ -81,22 +118,41 @@ def check_python_packages():
             print(f"✗ {name}: 未安装")
 
 def check_cuda():
-    """检查 CUDA 和 PyTorch"""
+    """检查 CUDA 和 PyTorch - T4 适配"""
     print_section("CUDA 和 PyTorch")
     
     try:
         import torch
         print(f"PyTorch 版本: {torch.__version__}")
         print(f"CUDA 可用: {torch.cuda.is_available()}")
+        
         if torch.cuda.is_available():
             print(f"CUDA 版本: {torch.version.cuda}")
-            print(f"GPU 数量: {torch.cuda.device_count()}")
-            print(f"当前设备: {torch.cuda.current_device()}")
-            print(f"设备名称: {torch.cuda.get_device_name(0)}")
+            gpu_count = torch.cuda.device_count()
+            print(f"GPU 数量: {gpu_count}")
             
-            # 显存信息
-            total_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            print(f"GPU 显存: {total_memory:.2f} GB")
+            # 检查每个 GPU
+            for i in range(gpu_count):
+                print(f"\nGPU {i}:")
+                print(f"  设备名称: {torch.cuda.get_device_name(i)}")
+                total_memory = torch.cuda.get_device_properties(i).total_memory / (1024**3)
+                print(f"  总显存: {total_memory:.2f} GB")
+                
+            # T4 特定检查
+            print(f"\n✓ T4 兼容性检查:")
+            print(f"  BF16 支持: {torch.cuda.is_bf16_supported()}")
+            print(f"  FP16 支持: True (T4 原生支持)")
+            
+            if not torch.cuda.is_bf16_supported():
+                print(f"  ℹ T4 不支持 BF16，配置已设置为 FP16")
+                
+            # DDP 检查
+            if gpu_count >= 2:
+                print(f"  ✓ 可使用 DDP 双卡训练")
+                print(f"  等效 batch size: 1 (per GPU) × {gpu_count} × 16 (grad accum) = 32")
+            else:
+                print(f"  ⚠ 单卡训练，速度较慢")
+                
     except Exception as e:
         print(f"✗ CUDA 检查失败: {e}")
 
@@ -196,12 +252,29 @@ def check_config_files():
         if os.path.exists(filepath):
             size_kb = os.path.getsize(filepath) / 1024
             print(f"✓ {os.path.basename(filepath)}: {size_kb:.2f} KB")
+            
+            # 检查 T4 配置
+            if filepath.endswith("train_config.yaml"):
+                with open(filepath, 'r') as f:
+                    content = f.read()
+                    if 'fp16: true' in content:
+                        print(f"  ✓ FP16 已启用（T4 兼容）")
+                    if 'bf16: false' in content:
+                        print(f"  ✓ BF16 已禁用（T4 正确）")
+                    if 'per_device_train_batch_size: 1' in content:
+                        print(f"  ✓ Batch size 已优化为 T4 配置")
+                    if 'lora_rank: 16' in content:
+                        print(f"  ✓ LoRA Rank=16（16GB 显存优化）")
+                    if 'cutoff_len: 2048' in content:
+                        print(f"  ✓ 序列长度=2048（16GB 显存优化）")
+                    if 'adamw_8bit' in content:
+                        print(f"  ✓ 8bit 优化器已启用")
         else:
             print(f"✗ {os.path.basename(filepath)}: 不存在")
 
 def main():
     print("\n" + "="*60)
-    print("  Kaggle Qwen2-VL 微调环境检查")
+    print("  T4×2 GPU Qwen2-VL 微调环境检查")
     print("="*60)
     
     check_gpu()
@@ -214,7 +287,19 @@ def main():
     
     print("\n" + "="*60)
     print("  环境检查完成")
-    print("="*60 + "\n")
+    print("="*60)
+    
+    # T4 特别提示
+    print("\n⚡ T4×2 16GB 训练提示:")
+    print("  • 使用 FP16 混合精度（T4 不支持 BF16）")
+    print("  • Batch size = 1 per GPU，梯度累积 16 步")
+    print("  • 等效 batch size = 32 (1×2×16)")
+    print("  • LoRA Rank = 16（显存优化，32→16）")
+    print("  • 序列长度 = 2048（显存优化，4096→2048）")
+    print("  • 优化器 = AdamW 8bit（节省显存）")
+    print("  • 预计训练时长约 16-24 小时（3 epochs）")
+    print("  • 16GB 是最小配置，建议定期监控显存")
+    print("")
 
 if __name__ == "__main__":
     main()

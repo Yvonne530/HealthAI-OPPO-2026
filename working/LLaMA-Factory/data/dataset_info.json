@@ -1,30 +1,30 @@
 {
-  "rehab_train": {
-    "file_name": "/kaggle/temp/train.json",
-    "formatting": "sharegpt",
-    "columns": {
-      "messages": "conversations",
-      "images": "images"
+    "rehab_train": {
+      "file_name": "/kaggle/temp/train.json",
+      "formatting": "sharegpt",
+      "columns": {
+        "messages": "conversations",
+        "images": "images"
+      },
+      "tags": {
+        "role_tag": "from",
+        "content_tag": "value",
+        "user_tag": "human",
+        "assistant_tag": "gpt"
+      }
     },
-    "tags": {
-      "role_tag": "from",
-      "content_tag": "value",
-      "user_tag": "human",
-      "assistant_tag": "gpt"
-    }
-  },
-  "rehab_val": {
-    "file_name": "/kaggle/temp/val.json",
-    "formatting": "sharegpt",
-    "columns": {
-      "messages": "conversations",
-      "images": "images"
-    },
-    "tags": {
-      "role_tag": "from",
-      "content_tag": "value",
-      "user_tag": "human",
-      "assistant_tag": "gpt"
+    "rehab_val": {
+      "file_name": "/kaggle/temp/val.json",
+      "formatting": "sharegpt",
+      "columns": {
+        "messages": "conversations",
+        "images": "images"
+      },
+      "tags": {
+        "role_tag": "from",
+        "content_tag": "value",
+        "user_tag": "human",
+        "assistant_tag": "gpt"
+      }
     }
   }
-}

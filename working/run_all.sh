@@ -3,6 +3,16 @@
 # ============================================================
 # Kaggle Qwen2-VL 微调 - 一键执行脚本
 # ============================================================
+#
+# 环境变量控制（适用于 Kaggle 非交互式环境）：
+#   SKIP_TRAIN=1    - 跳过训练步骤
+#   SKIP_EXPORT=1   - 跳过导出与量化步骤
+#
+# 使用示例：
+#   bash run_all.sh                    # 执行全部流程
+#   SKIP_TRAIN=1 bash run_all.sh       # 跳过训练，只导出
+#   SKIP_EXPORT=1 bash run_all.sh      # 只训练，不导出
+# ============================================================
 
 set -e  # 遇到错误立即停止
 
@@ -17,6 +27,12 @@ echo "============================================================"
 echo "  Kaggle Qwen2-VL 医疗助手微调 - 全自动流程"
 echo "============================================================"
 echo -e "${NC}"
+
+# 显示当前配置
+echo "执行配置："
+echo "  SKIP_TRAIN=${SKIP_TRAIN:-0} (设为 1 跳过训练)"
+echo "  SKIP_EXPORT=${SKIP_EXPORT:-0} (设为 1 跳过导出)"
+echo ""
 
 # 检查 GPU
 echo -e "${YELLOW}[检查] 验证 GPU 环境...${NC}"
@@ -33,13 +49,11 @@ echo ""
 echo -e "${GREEN}[步骤 2/3] 开始训练${NC}"
 echo "----------------------------------------"
 
-# 询问是否跳过训练（用于调试）
-read -p "是否开始训练？(y/n，默认 y): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+# 使用环境变量控制是否跳过训练
+if [[ "${SKIP_TRAIN:-0}" != "1" ]]; then
     bash /kaggle/working/train.sh
 else
-    echo "⊙ 跳过训练步骤"
+    echo "⊙ 跳过训练步骤 (SKIP_TRAIN=1)"
 fi
 echo ""
 
@@ -47,12 +61,11 @@ echo ""
 echo -e "${GREEN}[步骤 3/3] 导出与量化${NC}"
 echo "----------------------------------------"
 
-read -p "是否导出并量化模型？(y/n，默认 y): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+# 使用环境变量控制是否跳过导出
+if [[ "${SKIP_EXPORT:-0}" != "1" ]]; then
     bash /kaggle/working/export_and_quantize.sh
 else
-    echo "⊙ 跳过导出步骤"
+    echo "⊙ 跳过导出步骤 (SKIP_EXPORT=1)"
 fi
 echo ""
 
