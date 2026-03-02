@@ -1,0 +1,269 @@
+RehabGuardian 4.1 —— 技术方案（架构升级版）
+版本：V4.1 三层智能架构
+参赛：第十九届全国大学生软件创新大赛
+赛道：软件无处不在，创新定义未来
+
+一、项目概要（升级版）
+1.1 一句话定位
+基于感知-预测-决策三层端侧智能架构，实现居家康复动作的趋势级风险干预系统
+
+1.2 核心价值
+维度	传统方案	RehabGuardian 4.1
+架构层级	功能堆叠	三层智能闭环
+时间维度	事后分析	趋势级预测
+决策方式	固定规则	神经符号融合
+交互体验	文字提示	AR实时渲染
+二、三层智能架构（核心升级）
+text
+┌─────────────────────────────────────────────────────┐
+│                     决策生成层                        │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│  │  规则引擎   │ │ 风险等级    │ │ 大模型      │   │
+│  │  神经符号   │ │  高/中/低   │ │  自然语言   │   │
+│  └─────────────┘ └─────────────┘ └─────────────┘   │
+│         ↑              ↑              ↑             │
+├──────────┼──────────────┼──────────────┼─────────────┤
+│                     运动建模层                        │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│  │  未来预测   │ │ 力矩估计    │ │ 压力中心    │   │
+│  │  GRU+Conv1d │ │ 杠杆公式    │ │ 几何计算    │   │
+│  │  0.3s预测   │ │ 疲劳因子    │ │ 重心投影    │   │
+│  └─────────────┘ └─────────────┘ └─────────────┘   │
+│         ↑              ↑              ↑             │
+├──────────┼──────────────┼──────────────┼─────────────┤
+│                     感知层                            │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│  │  本地AI SDK │ │  健康SDK    │ │  时序缓存   │   │
+│  │  骨骼点     │ │  心率       │ │  20帧窗口   │   │
+│  └─────────────┘ └─────────────┘ └─────────────┘   │
+└─────────────────────────────────────────────────────┘
+三、三层详细设计
+3.1 第一层：感知层 (Perception Layer)
+定位： 原始运动状态的获取与预处理
+
+输入：
+
+摄像头视频流
+
+OPPO Watch心率数据
+
+用户基本信息（身高、体重）
+
+输出：
+
+归一化骨骼点序列 [20, 33]
+
+实时心率 [1Hz]
+
+时间对齐的多模态数据
+
+核心代码：
+
+java
+public class PerceptionLayer {
+    private LocalAIHelper poseHelper;
+    private HealthSDK healthSDK;
+    private CircularBuffer<FrameData> buffer; // 20帧缓存
+    
+    public void onFrame(Bitmap cameraFrame) {
+        // 1. 获取骨骼点（官方SDK）
+        float[][] keypoints = poseHelper.estimatePose(cameraFrame);
+        
+        // 2. 归一化（以骨盆为原点）
+        keypoints = normalize(keypoints);
+        
+        // 3. 获取当前心率
+        int heartRate = healthSDK.getCurrentHeartRate();
+        
+        // 4. 存入缓存
+        FrameData frame = new FrameData(keypoints, heartRate);
+        buffer.push(frame);
+        
+        // 5. 当缓存满20帧，触发建模层
+        if (buffer.isFull()) {
+            motionModelingLayer.process(buffer.getAll());
+        }
+    }
+}
+创新点：
+
+✅ 多模态时序对齐：视觉+生理数据在时间轴上严格对齐
+
+✅ 归一化处理：消除身高、拍摄距离影响
+
+✅ 20帧滑动窗口：为时序建模提供上下文
+
+3.2 第二层：运动建模层 (Motion Modeling Layer)
+定位： 从“看到动作”升级到“预测风险趋势”
+
+子模块1：未来姿态预测
+
+项目	内容
+输入	过去20帧骨骼点 [20, 33]
+模型	Conv1d + GRU（算子友好）
+输出	未来10帧骨骼点 [10, 33]
+物理意义	提前0.3秒看到动作趋势
+误差	<5cm
+子模块2：力矩估计
+
+项目	内容
+输入	当前骨骼角度、体重
+算法	杠杆公式 + 关节系数
+输出	6个主要关节力矩值
+物理意义	量化关节受力负荷
+子模块3：压力中心投影
+
+项目	内容
+输入	双脚+髋部关键点
+算法	几何加权计算
+输出	重心投影点 (x, y)
+物理意义	判断平衡稳定性
+子模块4：疲劳因子动态调整
+
+java
+public class FatigueFactor {
+    private static final int HR_REST = 70;
+    private static final int HR_MAX = 190;
+    
+    public float compute(int currentHR, int duration) {
+        // 心率越高，疲劳因子越大
+        float hrFactor = (currentHR - HR_REST) / (float)(HR_MAX - HR_REST);
+        
+        // 运动时间越长，疲劳因子越大
+        float timeFactor = Math.min(duration / 600.0f, 1.0f); // 10分钟饱和
+        
+        // 综合疲劳因子 0.0-1.0
+        float fatigue = (hrFactor * 0.7f + timeFactor * 0.3f);
+        
+        return Math.min(fatigue, 1.0f);
+    }
+}
+疲劳因子的作用：
+
+疲劳时自动降低风险阈值
+
+力矩预警从180Nm降到150Nm
+
+体现“因人而异”的智能
+
+建模层输出：
+
+java
+public class MotionModel {
+    float[][][] futureFrames;    // [10, 33, 3] 未来0.3s姿态
+    float[] jointTorques;         // [6] 关节力矩
+    PointF centerOfPressure;      // 压力中心
+    float fatigueLevel;           // 0.0-1.0 疲劳程度
+    float riskTrend;              // -1.0到1.0 风险趋势（负向好，正向坏）
+}
+创新点：
+
+✅ 趋势级预测：不是判断当前，是预测未来
+
+✅ 多物理量融合：位置+受力+平衡+疲劳
+
+✅ 风险趋势指标：量化风险变化方向
+
+3.3 第三层：决策生成层 (Decision Layer)
+定位： 把数值风险转化为可理解的康复指导
+
+子模块1：规则引擎（神经符号）
+
+java
+public class DecisionLayer {
+    
+    public RiskLevel evaluate(MotionModel model) {
+        int riskScore = 0;
+        
+        // 1. 未来姿态风险
+        if (willExceedRange(model.futureFrames)) {
+            riskScore += 3;  // 提前0.3s预警
+        }
+        
+        // 2. 当前受力风险（考虑疲劳）
+        float fatigue = model.fatigueLevel;
+        float torqueThreshold = 180 * (1.0f - fatigue * 0.3f); // 疲劳时阈值降低
+        
+        for (float torque : model.jointTorques) {
+            if (torque > torqueThreshold) {
+                riskScore += 2;
+            }
+        }
+        
+        // 3. 平衡风险
+        if (isOutOfBase(model.centerOfPressure)) {
+            riskScore += 2;
+        }
+        
+        // 4. 风险趋势（如果趋势变差，加分）
+        if (model.riskTrend > 0.3f) {
+            riskScore += 2;
+        }
+        
+        return RiskLevel.fromScore(riskScore);
+    }
+}
+子模块2：大模型生成自然语言
+
+项目	内容
+模型	Qwen2.5-3B (1.58-bit量化)
+输入	风险等级 + 关节数据 + 用户query
+输出	个性化康复建议
+延迟	<50ms
+Prompt模板：
+
+text
+你是一个专业的康复教练。基于以下数据给出建议：
+- 动作：深蹲
+- 右膝受力：168 Nm (阈值: 150)
+- 心率：145 bpm
+- 疲劳程度：0.6
+- 风险趋势：上升
+
+请给出简短、具体的指导（20字以内）。
+子模块3：AR渲染与语音输出
+
+元素	表示	含义
+白色骨架	实时渲染	当前姿态
+蓝色透明骨架	叠加渲染	未来0.3s预测
+红色高亮	闪烁	风险关节
+小红点	实时投影	压力中心
+数值面板	右上角	力矩/心率/风险
+语音	TTS	实时指导
+四、三层架构的答辩话术
+4.1 一句话概括
+本系统构建了感知-预测-决策三层端侧智能架构，实现居家康复动作的趋势级风险干预。
+
+4.2 分层解释
+层级	功能	技术亮点	价值
+感知层	获取原始数据	OPPO SDK深度集成	多模态输入
+建模层	预测风险趋势	GRU未来预测+物理估计	从“看到”到“预见”
+决策层	生成康复指导	神经符号融合+大模型	个性化干预
+4.3 评委可能问的问题
+Q：你们和普通姿态识别App有什么区别？
+
+A：普通App是单帧判断，我们是趋势预测。
+他们看到膝盖过伸才报警，我们提前0.3秒预警。
+这就是感知-预测-决策三层架构的价值。
+
+Q：为什么分三层？
+
+A：三层架构实现了关注点分离：
+
+感知层专注多模态数据获取
+
+建模层专注物理规律建模
+
+决策层专注人机交互生成
+
+每一层可以独立优化，这是工程系统思维。
+
+Q：创新点在哪？
+
+A：三个层次都有创新：
+
+感知层：多模态时序对齐
+
+建模层：GRU未来预测+疲劳因子
+
+决策层：神经符号融合架构
