@@ -29,6 +29,15 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
+// MediaPipe Pose imports
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.pose.Pose
+import com.google.mlkit.vision.pose.PoseDetection
+import com.google.mlkit.vision.pose.PoseLandmark
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 
 interface StreamingCallback {
     fun onToken(token: String)
@@ -48,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     private var progressDialog: ModelLoadProgressDialog? = null
     private var currentImageUri: Uri? = null
     private var recognitionImageUri: Uri? = null
+    private var recognitionOriginalBitmap: Bitmap? = null // 原始完整图片，用于骨骼检测
     private var cachedModelPath: String? = null
     private var cachedMmprojPath: String? = null
     private var recognitionPrompt: String = "请分析这张康复训练动作是否规范，给出建议。"
@@ -70,6 +80,9 @@ class MainActivity : AppCompatActivity() {
     private var userAvatarPath: String? = null
     private var aiNickname: String = "AI助手"
     private var aiAvatarPath: String? = null
+
+    // MediaPipe Pose detector
+    private var poseDetector: com.google.mlkit.vision.pose.PoseDetector? = null
 
     private external fun nativeLoadModel(modelPath: String, mmprojPath: String, systemPrompt: String, maxTokens: Int, contextSize: Int, temperature: Float, topP: Float, topK: Int): String
     private external fun nativeAnalyzeImage(imageData: ByteArray, width: Int, height: Int, userInput: String): String
@@ -802,7 +815,46 @@ class MainActivity : AppCompatActivity() {
         val hasImage = currentImageUri != null
         val imageUriToProcess = currentImageUri
 
-        chatAdapter.addUserMessage(message, imageUriToProcess)
+        // 如果有图片，先进行骨骼检测，再显示到聊天
+        var processedImageUri: Uri? = null
+        if (hasImage && imageUriToProcess != null) {
+            try {
+                val inputStream = contentResolver.openInputStream(imageUriToProcess)
+                var bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+
+                if (bitmap != null) {
+                    // 检测骨骼姿态
+                    val pose = detectPoseSync(bitmap)
+
+                    // 如果检测到骨骼，在图片上绘制
+                    if (pose != null) {
+                        try {
+                            bitmap = drawPoseLandmarks(bitmap, pose)
+                            Log.d("MainActivity", "已绘制骨骼到图片")
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "绘制骨骼失败", e)
+                        }
+                    }
+
+                    // 保存带骨骼的图片
+                    val poseImageFile = File(filesDir, "pose_images")
+                    if (!poseImageFile.exists()) {
+                        poseImageFile.mkdirs()
+                    }
+                    val imageFile = File(poseImageFile, "pose_${System.currentTimeMillis()}.jpg")
+                    FileOutputStream(imageFile).use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                    }
+                    processedImageUri = Uri.fromFile(imageFile)
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "处理图片失败", e)
+            }
+        }
+
+        // 添加到聊天（使用处理后的图片URI）
+        chatAdapter.addUserMessage(message, processedImageUri ?: imageUriToProcess)
 
         if (message.isNotEmpty() || hasImage) {
             val formattedMessage = "[用户]|||$message"
@@ -861,13 +913,29 @@ class MainActivity : AppCompatActivity() {
                     Thread {
                         try {
                             val inputStream = contentResolver.openInputStream(imageUriToProcess)
-                            val bitmap = BitmapFactory.decodeStream(inputStream)
+                        var bitmap = BitmapFactory.decodeStream(inputStream)
                             inputStream?.close()
 
                             if (bitmap != null) {
+                                // 第一步：检测骨骼姿态
+                                val pose = detectPoseSync(bitmap)
+                                var poseInfo = ""
+
+                                // 第二步：如果检测到骨骼，在图片上绘制并获取姿态信息
+                                if (pose != null) {
+                                    try {
+                                        bitmap = drawPoseLandmarks(bitmap, pose)
+                                        poseInfo = buildPoseInfoText(pose)
+                                    } catch (e: Exception) {
+                                        Log.e("MainActivity", "绘制骨骼失败", e)
+                                    }
+                                }
+
+                                // 第三步：压缩图片
                                 val outputStream = ByteArrayOutputStream()
                                 bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
                                 val imageData = outputStream.toByteArray()
+
 
                                 val result = nativeAnalyzeImage(imageData, bitmap.width, bitmap.height, message)
                                 Handler(Looper.getMainLooper()).post {
@@ -1636,13 +1704,18 @@ class MainActivity : AppCompatActivity() {
             inputStream?.close()
 
             if (originalBitmap != null) {
-                // 压缩图片到合适的大小 (最大宽度800px)
+                // 保存原始完整图片，用于骨骼检测
+                recognitionOriginalBitmap = originalBitmap
+
+                // 压缩图片到合适的大小用于显示 (最大宽度800px)
                 val maxDimension = 800
                 val ratio = maxDimension.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
                 val newWidth = (originalBitmap.width * ratio).toInt()
                 val newHeight = (originalBitmap.height * ratio).toInt()
 
                 val compressedBitmap = Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+
+                // 显示图片
                 binding.imageViewRecognition.setImageBitmap(compressedBitmap)
 
                 binding.recognitionImageSection.visibility = View.VISIBLE
@@ -1665,8 +1738,13 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val bitmap = (drawable as android.graphics.drawable.BitmapDrawable).bitmap
-        performActionRecognition(bitmap)
+        // 使用原始完整图片进行骨骼检测
+        val originalBitmap = recognitionOriginalBitmap
+        if (originalBitmap == null) {
+            Toast.makeText(this, "图片加载失败，请重新选择", Toast.LENGTH_SHORT).show()
+            return
+        }
+        performActionRecognition(originalBitmap)
     }
 
     private fun performActionRecognition(bitmap: Bitmap) {
@@ -1703,25 +1781,256 @@ class MainActivity : AppCompatActivity() {
     private fun performImageAnalysis(bitmap: Bitmap) {
         binding.textViewRecognitionResult.text = "正在识别..."
 
+        // 在后台线程执行骨骼检测和图片处理
         Thread {
             try {
-                // 压缩图片为JPEG格式，质量70%
-                val outputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-                val imageData = outputStream.toByteArray()
+                // 第一步：检测骨骼姿态并绘制（在原始完整图片上）
+                var processedBitmap = bitmap
+                var poseInfo = ""
 
-                // 调用图片分析方法
-                val result = nativeAnalyzeImage(imageData, bitmap.width, bitmap.height, recognitionPrompt)
+                try {
+                    val pose = detectPoseSync(bitmap)
+                    if (pose != null) {
+                        processedBitmap = drawPoseLandmarks(bitmap, pose)
+                        poseInfo = buildPoseInfoText(pose)
+                        Log.d("MainActivity", "已绘制骨骼到识别图片，原始尺寸: ${processedBitmap.width}x${processedBitmap.height}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "骨骼检测失败", e)
+                }
 
+                // 第二步：缩放图片用于显示和发送（最大800px）
+                val maxDimension = 800
+                val ratio = maxDimension.toFloat() / maxOf(processedBitmap.width, processedBitmap.height)
+                val displayBitmap = if (ratio < 1f) {
+                    Bitmap.createScaledBitmap(processedBitmap,
+                        (processedBitmap.width * ratio).toInt(),
+                        (processedBitmap.height * ratio).toInt(), true)
+                } else {
+                    processedBitmap
+                }
+
+                // 更新识别界面的图片显示（必须在主线程）
                 Handler(Looper.getMainLooper()).post {
-                    binding.textViewRecognitionResult.text = result
+                    binding.imageViewRecognition.setImageBitmap(displayBitmap)
+                }
+
+                // 第三步：保存并发送缩放后的图片到AI
+                var imageData: ByteArray? = null
+                var imageWidth = displayBitmap.width
+                var imageHeight = displayBitmap.height
+
+                try {
+                    val poseImageFile = File(filesDir, "pose_images")
+                    if (!poseImageFile.exists()) {
+                        poseImageFile.mkdirs()
+                    }
+                    val imageFile = File(poseImageFile, "pose_recognition_${System.currentTimeMillis()}.jpg")
+                    FileOutputStream(imageFile).use { out ->
+                        displayBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                    }
+                    val inputStream = FileInputStream(imageFile)
+                    imageData = inputStream.readBytes()
+                    inputStream.close()
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "保存识别图片失败，使用内存中的图片", e)
+                    val outputStream = ByteArrayOutputStream()
+                    displayBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                    imageData = outputStream.toByteArray()
+                }
+
+                // 第四步：调用 AI 分析
+                try {
+                    val fullPrompt = if (poseInfo.isNotEmpty()) {
+                        "$recognitionPrompt\n\n骨骼姿态信息:\n$poseInfo"
+                    } else {
+                        recognitionPrompt
+                    }
+
+                    val result = nativeAnalyzeImage(imageData!!, imageWidth, imageHeight, fullPrompt)
+
+                    Handler(Looper.getMainLooper()).post {
+                        binding.textViewRecognitionResult.text = result
+                    }
+                } catch (e: Exception) {
+                    Handler(Looper.getMainLooper()).post {
+                        binding.textViewRecognitionResult.text = "识别失败: ${e.message}"
+                    }
                 }
             } catch (e: Exception) {
+                Log.e("MainActivity", "图片分析失败", e)
                 Handler(Looper.getMainLooper()).post {
-                    binding.textViewRecognitionResult.text = "识别失败: ${e.message}"
-                    e.printStackTrace()
+                    binding.textViewRecognitionResult.text = "处理失败: ${e.message}"
                 }
             }
         }.start()
+    }
+
+
+
+    // ========== MediaPipe Pose 相关函数 ==========
+    // ========== MediaPipe Pose 相关函数 ==========
+
+    // 初始化 Pose 检测器
+    private fun initPoseDetector() {
+        if (poseDetector == null) {
+            val options = PoseDetectorOptions.Builder()
+                .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
+                .build()
+            poseDetector = PoseDetection.getClient(options)
+            Log.d("MainActivity", "PoseDetector 初始化完成")
+        }
+    }
+
+    // 同步检测姿态
+    private fun detectPoseSync(bitmap: Bitmap): Pose? {
+        Log.d("MainActivity", "开始骨骼检测，图片尺寸: ${bitmap.width}x${bitmap.height}")
+
+        if (poseDetector == null) {
+            initPoseDetector()
+        }
+
+        var result: Pose? = null
+        val latch = CountDownLatch(1)
+
+        try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            Log.d("MainActivity", "InputImage 创建完成，尺寸: ${image.width}x${image.height}")
+
+            poseDetector?.process(image)
+                ?.addOnSuccessListener { detectedPose: Pose ->
+                    // 统计检测到的关键点数量
+                    val allLandmarks = detectedPose.allPoseLandmarks
+                    Log.d("MainActivity", "骨骼检测成功，检测到 ${allLandmarks.size} 个关键点")
+
+                    // 打印每个关键点的信息
+                    for (landmark in allLandmarks) {
+                        Log.v("MainActivity", "关键点: ${landmark.landmarkType}, " +
+                                "位置: (${landmark.position.x}, ${landmark.position.y}), " +
+                                "置信度: ${landmark.inFrameLikelihood}")
+                    }
+
+                    result = detectedPose
+                    latch.countDown()
+                }
+                ?.addOnFailureListener { e: Exception ->
+                    Log.e("MainActivity", "Pose detection failed", e)
+                    latch.countDown()
+                }
+
+            // 等待结果，最多等待5秒
+            Log.d("MainActivity", "等待骨骼检测结果...")
+            latch.await(5, TimeUnit.SECONDS)
+
+            if (result == null) {
+                Log.w("MainActivity", "骨骼检测返回 null")
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Pose detection error", e)
+        }
+
+        return result
+        }
+
+
+    // 在图片上绘制骨骼关键点和连线
+    private fun drawPoseLandmarks(bitmap: Bitmap, pose: Pose): Bitmap {
+        Log.d("MainActivity", "开始绘制骨骼，图片尺寸: ${bitmap.width}x${bitmap.height}")
+
+        val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = android.graphics.Canvas(mutableBitmap)
+
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.GREEN
+            strokeWidth = 8f
+            style = android.graphics.Paint.Style.FILL
+        }
+
+        val linePaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.GREEN
+            strokeWidth = 6f
+            style = android.graphics.Paint.Style.STROKE
+        }
+
+        // 绘制关键点之间的连线
+        val connections = listOf(
+            Pair(PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER),
+            Pair(PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP),
+            Pair(PoseLandmark.LEFT_SHOULDER, PoseLandmark.LEFT_HIP),
+            Pair(PoseLandmark.RIGHT_SHOULDER, PoseLandmark.RIGHT_HIP),
+            Pair(PoseLandmark.LEFT_SHOULDER, PoseLandmark.LEFT_ELBOW),
+            Pair(PoseLandmark.LEFT_ELBOW, PoseLandmark.LEFT_WRIST),
+            Pair(PoseLandmark.RIGHT_SHOULDER, PoseLandmark.RIGHT_ELBOW),
+            Pair(PoseLandmark.RIGHT_ELBOW, PoseLandmark.RIGHT_WRIST),
+            Pair(PoseLandmark.LEFT_HIP, PoseLandmark.LEFT_KNEE),
+            Pair(PoseLandmark.LEFT_KNEE, PoseLandmark.LEFT_ANKLE),
+            Pair(PoseLandmark.RIGHT_HIP, PoseLandmark.RIGHT_KNEE),
+            Pair(PoseLandmark.RIGHT_KNEE, PoseLandmark.RIGHT_ANKLE)
+        )
+
+        for ((startType, endType) in connections) {
+            val start = pose.getPoseLandmark(startType)
+            val end = pose.getPoseLandmark(endType)
+            if (start != null && end != null) {
+                canvas.drawLine(
+                    start.position.x, start.position.y,
+                    end.position.x, end.position.y,
+                    linePaint
+                )
+            }
+        }
+
+        // 绘制所有关键点
+        val landmarkTypes = listOf(
+            PoseLandmark.NOSE,
+            PoseLandmark.LEFT_EYE, PoseLandmark.RIGHT_EYE,
+            PoseLandmark.LEFT_EAR, PoseLandmark.RIGHT_EAR,
+            PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER,
+            PoseLandmark.LEFT_ELBOW, PoseLandmark.RIGHT_ELBOW,
+            PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST,
+            PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP,
+            PoseLandmark.LEFT_KNEE, PoseLandmark.RIGHT_KNEE,
+            PoseLandmark.LEFT_ANKLE, PoseLandmark.RIGHT_ANKLE
+        )
+
+        for (landmarkType in landmarkTypes) {
+            val landmark = pose.getPoseLandmark(landmarkType)
+            if (landmark != null) {
+                canvas.drawCircle(landmark.position.x, landmark.position.y, 10f, paint)
+            }
+        }
+
+        return mutableBitmap
+    }
+
+    // 构建姿态信息文本
+    private fun buildPoseInfoText(pose: Pose): String {
+        val sb = StringBuilder()
+        sb.appendLine("=== 骨骼关键点坐标 ===")
+
+        val landmarkNames = mapOf(
+            PoseLandmark.NOSE to "鼻子",
+            PoseLandmark.LEFT_EYE to "左眼", PoseLandmark.RIGHT_EYE to "右眼",
+            PoseLandmark.LEFT_EAR to "左耳", PoseLandmark.RIGHT_EAR to "右耳",
+            PoseLandmark.LEFT_SHOULDER to "左肩", PoseLandmark.RIGHT_SHOULDER to "右肩",
+            PoseLandmark.LEFT_ELBOW to "左肘", PoseLandmark.RIGHT_ELBOW to "右肘",
+            PoseLandmark.LEFT_WRIST to "左手腕", PoseLandmark.RIGHT_WRIST to "右手腕",
+            PoseLandmark.LEFT_HIP to "左髋", PoseLandmark.RIGHT_HIP to "右髋",
+            PoseLandmark.LEFT_KNEE to "左膝", PoseLandmark.RIGHT_KNEE to "右膝",
+            PoseLandmark.LEFT_ANKLE to "左脚踝", PoseLandmark.RIGHT_ANKLE to "右脚踝"
+        )
+
+        for ((landmarkType, name) in landmarkNames) {
+            val landmark = pose.getPoseLandmark(landmarkType)
+            if (landmark != null && landmark.inFrameLikelihood > 0.3f) {
+                val x = String.format("%.3f", landmark.position.x)
+                val y = String.format("%.3f", landmark.position.y)
+                val conf = String.format("%.2f", landmark.inFrameLikelihood)
+                sb.appendLine("$name: 坐标($x, $y), 置信度: $conf")
+            }
+        }
+
+
+        return sb.toString()
     }
 }

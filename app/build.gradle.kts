@@ -83,6 +83,9 @@ dependencies {
     implementation("io.noties.markwon:ext-strikethrough:4.6.2")
     implementation("io.noties.markwon:ext-tables:4.6.2")
     implementation("io.noties.markwon:ext-tasklist:4.6.2")
+
+    // MediaPipe Pose 姿态检测
+    implementation("com.google.mlkit:pose-detection:17.0.0")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
