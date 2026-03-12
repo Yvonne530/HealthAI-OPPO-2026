@@ -1,20 +1,6 @@
 <resources>
     <string name="app_name">动悟</string>
     <string name="image_description">Selected image</string>
-    <string name="select_image_button">选择图片</string>
-    <string name="model_files_title">模型文件</string>
-    <string name="select_model_button">选择主模型文件 (.gguf)</string>
-    <string name="select_mmproj_button">选择多模态文件 (-mmproj.gguf，可选)</string>
-    <string name="model_path_placeholder">未选择主模型文件</string>
-    <string name="mmproj_path_placeholder">未选择多模态文件（将使用单文件模式）</string>
     <string name="drawer_open">打开侧边栏</string>
     <string name="drawer_close">关闭侧边栏</string>
-    <string name="recognition_title">动作识别</string>
-    <string name="recognition_description">选择或拍摄图片，识别人物动作是否规范</string>
-    <string name="recognition_select_image">选择图片</string>
-    <string name="recognition_capture_image">拍摄图片</string>
-    <string name="recognition_result">识别结果</string>
-    <string name="recognition_waiting">等待识别...</string>
-    <string name="recognition_processing">正在识别...</string>
-    <string name="recognition_placeholder">点击下方按钮选择或拍摄图片</string>
 </resources>

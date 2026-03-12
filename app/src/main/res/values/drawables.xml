@@ -2,6 +2,4 @@
 <resources>
     <!-- 浅色模式下的背景色 -->
     <drawable name="bg_switch_item">#F5F5F5</drawable>
-    <color name="text_primary">#FF000000</color>
-    <color name="text_secondary">#FF616161</color>
 </resources>

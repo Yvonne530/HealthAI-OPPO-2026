@@ -2,16 +2,18 @@ package com.erlab.actuaware
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -21,23 +23,33 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.erlab.actuaware.databinding.ActivityMainBinding
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-
-// MediaPipe Pose imports
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.PoseDetection
-import com.google.mlkit.vision.pose.PoseLandmark
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import com.google.mlkit.vision.pose.PoseDetector
+import com.google.mlkit.vision.pose.PoseLandmark
+import java.io.File
+import io.noties.markwon.Markwon
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
+import java.io.FileOutputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.Executors
 
 interface StreamingCallback {
     fun onToken(token: String)
@@ -51,13 +63,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyAdapter: HistoryAdapter
     private lateinit var networkHelper: NetworkHelper
     private lateinit var historyHelper: HistoryHelper
-    private lateinit var modelAdapter: ModelAdapter
     private lateinit var toolManager: ToolManager
     private lateinit var toolChatManager: ToolChatManager
+    private lateinit var performanceManager: PerformanceManager
+    private lateinit var recognitionMarkwon: Markwon  // 用于识别界面的 Markdown 渲染
+    private val imageCacheManager = ImageCacheManager.getInstance()
     private var progressDialog: ModelLoadProgressDialog? = null
     private var currentImageUri: Uri? = null
     private var recognitionImageUri: Uri? = null
-    private var recognitionOriginalBitmap: Bitmap? = null // 原始完整图片，用于骨骼检测
     private var cachedModelPath: String? = null
     private var cachedMmprojPath: String? = null
     private var recognitionPrompt: String = "请分析这张康复训练动作是否规范，给出建议。"
@@ -76,16 +89,28 @@ class MainActivity : AppCompatActivity() {
     private var isHistoryLoadingToJNI: Boolean = false
     private var isInitializing: Boolean = false
 
+    // CameraX 实时摄像头捕获相关
+    private var cameraExecutor: ExecutorService? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var isCameraCapturing: Boolean = false
+    private var cameraCaptureInterval: Long = 100 // 每100ms捕获一次帧（10 FPS）
+    private var currentCameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+    // MediaPipe Pose 检测器
+    private var poseDetector: PoseDetector? = null
+
+    // 智能滚动：用户向上滚动时暂停自动滚动，滚动到底部时恢复
+    private var autoScrollEnabled: Boolean = true
+
     private var userNickname: String = "用户"
     private var userAvatarPath: String? = null
     private var aiNickname: String = "AI助手"
     private var aiAvatarPath: String? = null
 
-    // MediaPipe Pose detector
-    private var poseDetector: com.google.mlkit.vision.pose.PoseDetector? = null
-
+    private external fun nativeSetPerformanceParams(threads: Int, batchSize: Int, gpuLayers: Int, enableFlashAttention: Boolean)
     private external fun nativeLoadModel(modelPath: String, mmprojPath: String, systemPrompt: String, maxTokens: Int, contextSize: Int, temperature: Float, topP: Float, topK: Int): String
-    private external fun nativeAnalyzeImage(imageData: ByteArray, width: Int, height: Int, userInput: String): String
+    // 使用 DirectByteBuffer 减少 JNI 复制开销，支持 ARGB 格式
+    private external fun nativeAnalyzeImageDirect(imageData: java.nio.ByteBuffer, width: Int, height: Int, userInput: String): String
     private external fun nativeChat(userInput: String, resetHistory: Boolean): String
     private external fun nativeResetChatHistory(): Unit
     private external fun nativeRestoreContext(historyJson: String): String
@@ -332,6 +357,21 @@ class MainActivity : AppCompatActivity() {
                 nativeChat(message, reset)
             }
 
+            // 初始化性能管理器
+            performanceManager = PerformanceManager(this)
+            Log.d("MainActivity", performanceManager.getDeviceInfo())
+
+            // 初始化识别界面的 Markwon 实例
+            recognitionMarkwon = Markwon.builder(this)
+                .usePlugin(StrikethroughPlugin.create())
+                .usePlugin(TablePlugin.create(this))
+                .usePlugin(TaskListPlugin.create(this))
+                .build()
+
+            // 根据设备性能自适应配置
+            cameraCaptureInterval = performanceManager.getRecommendedCameraInterval()
+            Log.d("MainActivity", "摄像头捕获间隔已设置为: ${cameraCaptureInterval}ms")
+
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
 
@@ -355,7 +395,17 @@ class MainActivity : AppCompatActivity() {
                 adapter = historyAdapter
             }
 
-            modelAdapter = ModelAdapter()
+            // 初始化 MediaPipe Pose 检测器
+            try {
+                poseDetector = PoseDetection.getClient(
+                    PoseDetectorOptions.Builder()
+                        .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
+                        .build()
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("MainActivity", "初始化 Pose 检测器失败: ${e.message}")
+            }
 
             binding.bottomNav.setOnItemSelectedListener { item ->
                 when (item.itemId) {
@@ -483,6 +533,30 @@ class MainActivity : AppCompatActivity() {
 
             binding.buttonStartRecognitionAnalysis.setOnClickListener {
                 performRecognitionAnalysis()
+            }
+
+            // 设置识别界面 ScrollView 的滚动监听器，实现智能滚动
+            binding.scrollViewRecognition.viewTreeObserver.addOnScrollChangedListener {
+                val scrollView = binding.scrollViewRecognition
+                val child = scrollView.getChildAt(0)
+                if (child != null) {
+                    // 判断是否滚动到底部（允许 10px 误差）
+                    val isAtBottom = scrollView.height + scrollView.scrollY >= child.height - 10
+                    autoScrollEnabled = isAtBottom
+                }
+            }
+
+            // 实时摄像头相关按钮
+            binding.buttonStartCameraCapture.setOnClickListener {
+                startCameraCapture()
+            }
+
+            binding.buttonSwitchCamera.setOnClickListener {
+                switchCamera()
+            }
+
+            binding.buttonStopCameraCapture.setOnClickListener {
+                stopCameraCapture()
             }
 
             binding.buttonSetSystemPrompt.setOnClickListener {
@@ -815,46 +889,7 @@ class MainActivity : AppCompatActivity() {
         val hasImage = currentImageUri != null
         val imageUriToProcess = currentImageUri
 
-        // 如果有图片，先进行骨骼检测，再显示到聊天
-        var processedImageUri: Uri? = null
-        if (hasImage && imageUriToProcess != null) {
-            try {
-                val inputStream = contentResolver.openInputStream(imageUriToProcess)
-                var bitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
-
-                if (bitmap != null) {
-                    // 检测骨骼姿态
-                    val pose = detectPoseSync(bitmap)
-
-                    // 如果检测到骨骼，在图片上绘制
-                    if (pose != null) {
-                        try {
-                            bitmap = drawPoseLandmarks(bitmap, pose)
-                            Log.d("MainActivity", "已绘制骨骼到图片")
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "绘制骨骼失败", e)
-                        }
-                    }
-
-                    // 保存带骨骼的图片
-                    val poseImageFile = File(filesDir, "pose_images")
-                    if (!poseImageFile.exists()) {
-                        poseImageFile.mkdirs()
-                    }
-                    val imageFile = File(poseImageFile, "pose_${System.currentTimeMillis()}.jpg")
-                    FileOutputStream(imageFile).use { out ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                    }
-                    processedImageUri = Uri.fromFile(imageFile)
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "处理图片失败", e)
-            }
-        }
-
-        // 添加到聊天（使用处理后的图片URI）
-        chatAdapter.addUserMessage(message, processedImageUri ?: imageUriToProcess)
+        chatAdapter.addUserMessage(message, imageUriToProcess)
 
         if (message.isNotEmpty() || hasImage) {
             val formattedMessage = "[用户]|||$message"
@@ -913,31 +948,28 @@ class MainActivity : AppCompatActivity() {
                     Thread {
                         try {
                             val inputStream = contentResolver.openInputStream(imageUriToProcess)
-                        var bitmap = BitmapFactory.decodeStream(inputStream)
+                            val bitmap = BitmapFactory.decodeStream(inputStream)
                             inputStream?.close()
 
                             if (bitmap != null) {
-                                // 第一步：检测骨骼姿态
-                                val pose = detectPoseSync(bitmap)
-                                var poseInfo = ""
-
-                                // 第二步：如果检测到骨骼，在图片上绘制并获取姿态信息
-                                if (pose != null) {
-                                    try {
-                                        bitmap = drawPoseLandmarks(bitmap, pose)
-                                        poseInfo = buildPoseInfoText(pose)
-                                    } catch (e: Exception) {
-                                        Log.e("MainActivity", "绘制骨骼失败", e)
-                                    }
+                                // 先缩放图片，限制最大尺寸为 800px，减少数据传输和处理时间
+                                val maxDimension = performanceManager.getRecommendedImageMaxDimension()
+                                val ratio = maxDimension.toFloat() / maxOf(bitmap.width, bitmap.height)
+                                val scaledBitmap = if (ratio < 1f) {
+                                    Bitmap.createScaledBitmap(bitmap,
+                                        (bitmap.width * ratio).toInt(),
+                                        (bitmap.height * ratio).toInt(), true)
+                                } else {
+                                    bitmap
                                 }
 
-                                // 第三步：压缩图片
-                                val outputStream = ByteArrayOutputStream()
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-                                val imageData = outputStream.toByteArray()
+                                // 优化：直接从 Bitmap 写入 ByteBuffer，无 IntArray 中间变量
+                                val argbBufferSize = scaledBitmap.width * scaledBitmap.height * 4
+                                val argbBuffer = java.nio.ByteBuffer.allocateDirect(argbBufferSize)
+                                scaledBitmap.copyPixelsToBuffer(argbBuffer)
+                                argbBuffer.flip()
 
-
-                                val result = nativeAnalyzeImage(imageData, bitmap.width, bitmap.height, message)
+                                val result = nativeAnalyzeImageDirect(argbBuffer, scaledBitmap.width, scaledBitmap.height, message)
                                 Handler(Looper.getMainLooper()).post {
                                     conversationHistory.add("[助手]|||$result")
                                     saveCurrentHistory()
@@ -1217,7 +1249,14 @@ class MainActivity : AppCompatActivity() {
                     loadModelInBackground(
                         clearChat = false,
                         onLoadSuccess = {
-                            // 模型加载成功，提示已在 loadModelInBackground 中显示
+                            // 模型加载成功后，恢复对话历史到 JNI 层
+                            loadConversationHistoryToJNI { success ->
+                                if (success) {
+                                    Log.d("MainActivity", "历史记录上下文恢复成功")
+                                } else {
+                                    Log.e("MainActivity", "历史记录上下文恢复失败")
+                                }
+                            }
                         },
                         onLoadFailed = { error ->
                             // 模型加载失败
@@ -1232,7 +1271,24 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 // 没有模型路径
-                Toast.makeText(this, "已加载历史记录（无模型）", Toast.LENGTH_SHORT).show()
+                if (isModelLoaded) {
+                    // 模型已加载，恢复对话历史到 JNI 层
+                    loadConversationHistoryToJNI { success ->
+                        if (success) {
+                            Log.d("MainActivity", "历史记录上下文恢复成功")
+                            runOnUiThread {
+                                Toast.makeText(this, "已加载历史记录", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Log.e("MainActivity", "历史记录上下文恢复失败")
+                            runOnUiThread {
+                                Toast.makeText(this, "加载历史记录失败", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, "已加载历史记录（无模型）", Toast.LENGTH_SHORT).show()
+                }
             }
         } catch (e: Exception) {
             Log.e("MainActivity", "加载历史记录失败", e)
@@ -1317,6 +1373,19 @@ class MainActivity : AppCompatActivity() {
 
         Thread {
             try {
+                // 设置性能参数到 C++ 层
+                try {
+                    nativeSetPerformanceParams(
+                        performanceManager.getRecommendedThreads(),
+                        performanceManager.getRecommendedBatchSize(),
+                        performanceManager.getRecommendedGpuLayers(),
+                        performanceManager.shouldEnableFlashAttention()
+                    )
+                    Log.d("MainActivity", "性能参数已设置到 C++ 层")
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "设置性能参数失败: ${e.message}")
+                }
+
                 val modelPath = cachedModelPath!!
                 val mmprojPath = cachedMmprojPath
 
@@ -1379,7 +1448,7 @@ class MainActivity : AppCompatActivity() {
                             // 在识别页面或加载历史记录时，先加载历史记录再显示消息
                             if (conversationHistory.isNotEmpty()) {
                                 try {
-                                    loadConversationHistoryToJNI { success ->
+                                    loadConversationHistoryToJNI { _ ->
                                         // 历史记录加载完成后才显示消息并调用回调
                                         chatAdapter.addSystemMessage(successMessage)
                                         onLoadSuccess?.invoke()
@@ -1509,6 +1578,29 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
+        // 停止摄像头
+        try {
+            stopCameraCapture()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 关闭线程池
+        try {
+            cameraExecutor?.shutdown()
+            cameraExecutor = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 关闭姿态检测器
+        try {
+            poseDetector?.close()
+            poseDetector = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         if (isModelLoaded) {
             try {
                 nativeFreeModel()
@@ -1621,31 +1713,7 @@ class MainActivity : AppCompatActivity() {
         binding.imageViewUserAvatar.setBackgroundColor(0xFF333333.toInt())
     }
 
-    private fun loadModelList() {
-        val modelFiles = mutableListOf<ModelFile>()
-
-        val modelDir = File(filesDir, "models")
-        if (modelDir.exists()) {
-            modelDir.listFiles { file ->
-                file.isFile && file.name.endsWith(".gguf")
-            }?.forEach { file ->
-                modelFiles.add(ModelFile(file, ModelFile.ModelType.MODEL))
-            }
-        }
-
-        val mmprojDir = File(filesDir, "mmproj")
-        if (mmprojDir.exists()) {
-            mmprojDir.listFiles { file ->
-                file.isFile && file.name.endsWith(".gguf")
-            }?.forEach { file ->
-                modelFiles.add(ModelFile(file, ModelFile.ModelType.MMPROJ))
-            }
-        }
-
-        modelFiles.sortBy { it.name }
-
-        modelAdapter.updateItems(modelFiles)
-    }
+    
 
     private fun updateSettingsModelDisplay() {
         // 更新模型显示
@@ -1697,6 +1765,9 @@ class MainActivity : AppCompatActivity() {
 
     
 
+    // 缓存缩放后的识别图片，避免重复缩放
+    private var recognitionBitmap: Bitmap? = null
+
     private fun displayRecognitionImage(uri: Uri) {
         try {
             val inputStream = contentResolver.openInputStream(uri)
@@ -1704,18 +1775,21 @@ class MainActivity : AppCompatActivity() {
             inputStream?.close()
 
             if (originalBitmap != null) {
-                // 保存原始完整图片，用于骨骼检测
-                recognitionOriginalBitmap = originalBitmap
-
-                // 压缩图片到合适的大小用于显示 (最大宽度800px)
+                // 压缩图片到合适的大小 (最大宽度800px) - 只缩放一次
                 val maxDimension = 800
                 val ratio = maxDimension.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
                 val newWidth = (originalBitmap.width * ratio).toInt()
                 val newHeight = (originalBitmap.height * ratio).toInt()
 
-                val compressedBitmap = Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
-
-                // 显示图片
+                // 直接创建为可变的 ARGB_8888 格式，后续骨骼绘制无需再复制
+                val compressedBitmap = if (ratio < 1f) {
+                    Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+                } else {
+                    originalBitmap
+                }
+                
+                // 缓存缩放后的 bitmap
+                recognitionBitmap = compressedBitmap
                 binding.imageViewRecognition.setImageBitmap(compressedBitmap)
 
                 binding.recognitionImageSection.visibility = View.VISIBLE
@@ -1732,19 +1806,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performRecognitionAnalysis() {
-        val drawable = binding.imageViewRecognition.drawable
-        if (drawable == null) {
-            Toast.makeText(this, "请先选择或拍摄图片", Toast.LENGTH_SHORT).show()
-            return
+        // 优先使用缓存的 bitmap，避免从 ImageView 获取
+        val bitmap = recognitionBitmap
+        if (bitmap == null) {
+            // 降级：从 ImageView 获取
+            val drawable = binding.imageViewRecognition.drawable
+            if (drawable == null) {
+                Toast.makeText(this, "请先选择或拍摄图片", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val ivBitmap = (drawable as android.graphics.drawable.BitmapDrawable).bitmap
+            performActionRecognition(ivBitmap)
+        } else {
+            performActionRecognition(bitmap)
         }
-
-        // 使用原始完整图片进行骨骼检测
-        val originalBitmap = recognitionOriginalBitmap
-        if (originalBitmap == null) {
-            Toast.makeText(this, "图片加载失败，请重新选择", Toast.LENGTH_SHORT).show()
-            return
-        }
-        performActionRecognition(originalBitmap)
     }
 
     private fun performActionRecognition(bitmap: Bitmap) {
@@ -1783,63 +1858,54 @@ class MainActivity : AppCompatActivity() {
 
         // 在后台线程执行骨骼检测和图片处理
         Thread {
+            val startTime = System.currentTimeMillis()
+            Log.d("MainActivity", "=== 开始图片识别流程 (优化版) ===")
+            Log.d("MainActivity", "输入图片尺寸: ${bitmap.width}x${bitmap.height}, 配置: ${bitmap.config}")
+            
             try {
-                // 第一步：检测骨骼姿态并绘制（在原始完整图片上）
-                var processedBitmap = bitmap
+                // 第一步：检测骨骼姿态并直接绘制到 bitmap 上 (in-place)
+                val poseStartTime = System.currentTimeMillis()
                 var poseInfo = ""
+                var processedBitmap: Bitmap = bitmap  // 默认使用原始 bitmap
 
                 try {
                     val pose = detectPoseSync(bitmap)
                     if (pose != null) {
-                        processedBitmap = drawPoseLandmarks(bitmap, pose)
+                        // in-place 绘制骨骼，无需复制 bitmap
+                        processedBitmap = drawPoseLandmarksInPlace(bitmap, pose)
                         poseInfo = buildPoseInfoText(pose)
-                        Log.d("MainActivity", "已绘制骨骼到识别图片，原始尺寸: ${processedBitmap.width}x${processedBitmap.height}")
+                        Log.d("MainActivity", "骨骼绘制完成，尺寸: ${processedBitmap.width}x${processedBitmap.height}")
                     }
                 } catch (e: Exception) {
                     Log.e("MainActivity", "骨骼检测失败", e)
                 }
+                val poseEndTime = System.currentTimeMillis()
+                Log.d("MainActivity", "姿态检测+绘制耗时: ${poseEndTime - poseStartTime}ms")
 
-                // 第二步：缩放图片用于显示和发送（最大800px）
-                val maxDimension = 800
-                val ratio = maxDimension.toFloat() / maxOf(processedBitmap.width, processedBitmap.height)
-                val displayBitmap = if (ratio < 1f) {
-                    Bitmap.createScaledBitmap(processedBitmap,
-                        (processedBitmap.width * ratio).toInt(),
-                        (processedBitmap.height * ratio).toInt(), true)
-                } else {
-                    processedBitmap
-                }
+                // 优化：已删除重复缩放步骤，直接使用已缩放的图片
 
                 // 更新识别界面的图片显示（必须在主线程）
                 Handler(Looper.getMainLooper()).post {
-                    binding.imageViewRecognition.setImageBitmap(displayBitmap)
+                    binding.imageViewRecognition.setImageBitmap(processedBitmap)
                 }
 
-                // 第三步：保存并发送缩放后的图片到AI
-                var imageData: ByteArray? = null
-                var imageWidth = displayBitmap.width
-                var imageHeight = displayBitmap.height
+                // 第二步：获取像素数据发送给AI（优化：直接转为 RGB ByteBuffer）
+                val pixelStartTime = System.currentTimeMillis()
+                val imageWidth = processedBitmap.width
+                val imageHeight = processedBitmap.height
+                
+                // 优化：直接从 Bitmap 写入 ByteBuffer，无 IntArray 中间变量
+                // 方案：使用 copyPixelsToBuffer 直接写入 ARGB 数据，JNI 端处理转换
+                val argbBufferSize = imageWidth * imageHeight * 4  // ARGB 每像素 4 字节
+                val argbBuffer = java.nio.ByteBuffer.allocateDirect(argbBufferSize)
+                processedBitmap.copyPixelsToBuffer(argbBuffer)
+                argbBuffer.flip()
+                
+                val pixelEndTime = System.currentTimeMillis()
+                Log.d("MainActivity", "ARGB数据准备耗时: ${pixelEndTime - pixelStartTime}ms, 数据大小: $argbBufferSize 字节")
 
-                try {
-                    val poseImageFile = File(filesDir, "pose_images")
-                    if (!poseImageFile.exists()) {
-                        poseImageFile.mkdirs()
-                    }
-                    val imageFile = File(poseImageFile, "pose_recognition_${System.currentTimeMillis()}.jpg")
-                    FileOutputStream(imageFile).use { out ->
-                        displayBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                    }
-                    val inputStream = FileInputStream(imageFile)
-                    imageData = inputStream.readBytes()
-                    inputStream.close()
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "保存识别图片失败，使用内存中的图片", e)
-                    val outputStream = ByteArrayOutputStream()
-                    displayBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                    imageData = outputStream.toByteArray()
-                }
-
-                // 第四步：调用 AI 分析
+                // 第三步：调用 AI 分析
+                val aiStartTime = System.currentTimeMillis()
                 try {
                     val fullPrompt = if (poseInfo.isNotEmpty()) {
                         "$recognitionPrompt\n\n骨骼姿态信息:\n$poseInfo"
@@ -1847,16 +1913,55 @@ class MainActivity : AppCompatActivity() {
                         recognitionPrompt
                     }
 
-                    val result = nativeAnalyzeImage(imageData!!, imageWidth, imageHeight, fullPrompt)
+                    // 设置流式回调
+                    nativeInitStreamingCallback(object : StreamingCallback {
+                        override fun onToken(token: String) {
+                            Handler(Looper.getMainLooper()).post {
+                                // 使用 Markwon 渲染 Markdown
+                                recognitionMarkwon.setMarkdown(binding.textViewRecognitionResult, token)
+                                // 智能滚动：只有在用户没有手动向上滚动时才自动滚动
+                                if (autoScrollEnabled) {
+                                    binding.scrollViewRecognition.post {
+                                        // 使用 scrollTo 替代 fullScroll，避免焦点问题
+                                        val child = binding.scrollViewRecognition.getChildAt(0)
+                                        if (child != null) {
+                                            val scrollY = child.height - binding.scrollViewRecognition.height
+                                            if (scrollY > 0) {
+                                                binding.scrollViewRecognition.scrollTo(0, scrollY)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
 
+                    // 流式输出开始时禁用文本选择，避免抢占焦点导致滚动问题
+                    binding.textViewRecognitionResult.setTextIsSelectable(false)
+                    binding.textViewRecognitionResult.text = "" // 清空之前的文本
+                    autoScrollEnabled = true // 新的识别开始时，重置自动滚动状态
+                    
+                    // 使用优化后的 DirectByteBuffer 方法（ARGB 格式）
+                    nativeAnalyzeImageDirect(argbBuffer, imageWidth, imageHeight, fullPrompt)
+                    
+                    val aiEndTime = System.currentTimeMillis()
+                    Log.d("MainActivity", "AI分析耗时: ${aiEndTime - aiStartTime}ms")
+
+                    // 清理流式回调
+                    nativeCleanupStreamingCallback()
+                    
+                    // 流式输出结束后恢复文本选择功能
                     Handler(Looper.getMainLooper()).post {
-                        binding.textViewRecognitionResult.text = result
+                        binding.textViewRecognitionResult.setTextIsSelectable(true)
                     }
                 } catch (e: Exception) {
                     Handler(Looper.getMainLooper()).post {
                         binding.textViewRecognitionResult.text = "识别失败: ${e.message}"
                     }
                 }
+                
+                val totalTime = System.currentTimeMillis() - startTime
+                Log.d("MainActivity", "=== 总耗时: ${totalTime}ms ===")
             } catch (e: Exception) {
                 Log.e("MainActivity", "图片分析失败", e)
                 Handler(Looper.getMainLooper()).post {
@@ -1866,28 +1971,13 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
-
-
     // ========== MediaPipe Pose 相关函数 ==========
-    // ========== MediaPipe Pose 相关函数 ==========
-
-    // 初始化 Pose 检测器
-    private fun initPoseDetector() {
-        if (poseDetector == null) {
-            val options = PoseDetectorOptions.Builder()
-                .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
-                .build()
-            poseDetector = PoseDetection.getClient(options)
-            Log.d("MainActivity", "PoseDetector 初始化完成")
-        }
-    }
 
     // 同步检测姿态
     private fun detectPoseSync(bitmap: Bitmap): Pose? {
-        Log.d("MainActivity", "开始骨骼检测，图片尺寸: ${bitmap.width}x${bitmap.height}")
-
         if (poseDetector == null) {
-            initPoseDetector()
+            Log.w("MainActivity", "PoseDetector 未初始化")
+            return null
         }
 
         var result: Pose? = null
@@ -1918,10 +2008,13 @@ class MainActivity : AppCompatActivity() {
                     latch.countDown()
                 }
 
-            // 等待结果，最多等待5秒
+            // 等待结果，最多等待 2 秒（优化：从 5 秒缩短）
             Log.d("MainActivity", "等待骨骼检测结果...")
-            latch.await(5, TimeUnit.SECONDS)
+            val completed = latch.await(2, TimeUnit.SECONDS)
 
+            if (!completed) {
+                Log.w("MainActivity", "骨骼检测超时")
+            }
             if (result == null) {
                 Log.w("MainActivity", "骨骼检测返回 null")
             }
@@ -1930,15 +2023,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         return result
+    }
+
+    // 在图片上绘制骨骼关键点和连线 (优化版：in-place 绘制)
+    private fun drawPoseLandmarksInPlace(bitmap: Bitmap, pose: Pose): Bitmap {
+        Log.d("MainActivity", "开始绘制骨骼 (in-place)，图片尺寸: ${bitmap.width}x${bitmap.height}")
+
+        // 只有在 bitmap 不可变时才复制
+        val canvasBitmap = if (bitmap.isMutable) {
+            bitmap
+        } else {
+            Log.d("MainActivity", "Bitmap 不可变，需要复制")
+            bitmap.copy(Bitmap.Config.ARGB_8888, true)
         }
-
-
-    // 在图片上绘制骨骼关键点和连线
-    private fun drawPoseLandmarks(bitmap: Bitmap, pose: Pose): Bitmap {
-        Log.d("MainActivity", "开始绘制骨骼，图片尺寸: ${bitmap.width}x${bitmap.height}")
-
-        val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val canvas = android.graphics.Canvas(mutableBitmap)
+        
+        val canvas = android.graphics.Canvas(canvasBitmap)
 
         val paint = android.graphics.Paint().apply {
             color = android.graphics.Color.GREEN
@@ -2000,7 +2099,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        return mutableBitmap
+        return canvasBitmap
     }
 
     // 构建姿态信息文本
@@ -2030,7 +2129,265 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
         return sb.toString()
+    }
+
+    // ========== 实时摄像头功能 ==========
+
+    private fun startCameraCapture() {
+        // 检查相机权限
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "需要相机权限", Toast.LENGTH_SHORT).show()
+            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+            return
+        }
+
+        if (isCameraCapturing) {
+            Toast.makeText(this, "摄像头已启动", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            try {
+                cameraProvider = cameraProviderFuture.get()
+
+                // 显示摄像头预览
+                binding.cameraPreviewSection.visibility = View.VISIBLE
+                binding.textViewRecognitionPlaceholder.visibility = View.GONE
+
+                // 解绑之前的使用
+                cameraProvider?.unbindAll()
+
+                // 创建预览用例
+                val preview = Preview.Builder()
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(binding.previewView.surfaceProvider)
+                    }
+
+                // 创建图像分析用例
+                val imageAnalyzer = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor ?: Executors.newSingleThreadExecutor(), CameraFrameAnalyzer())
+                    }
+
+                // 绑定用例
+                cameraProvider?.bindToLifecycle(
+                    this,
+                    currentCameraSelector,
+                    preview,
+                    imageAnalyzer
+                )
+
+                isCameraCapturing = true
+                Toast.makeText(this, "摄像头已启动", Toast.LENGTH_SHORT).show()
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(this, "启动摄像头失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun stopCameraCapture() {
+        try {
+            cameraProvider?.unbindAll()
+            isCameraCapturing = false
+            binding.cameraPreviewSection.visibility = View.GONE
+            binding.textViewRecognitionPlaceholder.visibility = View.VISIBLE
+            Toast.makeText(this, "摄像头已停止", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun switchCamera() {
+        if (!isCameraCapturing) {
+            Toast.makeText(this, "请先启动摄像头", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        currentCameraSelector = if (currentCameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        }
+
+        // 重新绑定摄像头
+        try {
+            cameraProvider?.unbindAll()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.setSurfaceProvider(binding.previewView.surfaceProvider)
+                }
+
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor ?: Executors.newSingleThreadExecutor(), CameraFrameAnalyzer())
+                }
+
+            cameraProvider?.bindToLifecycle(
+                this,
+                currentCameraSelector,
+                preview,
+                imageAnalyzer
+            )
+
+            Toast.makeText(this, "已切换${if (currentCameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) "后置" else "前置"}摄像头", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "切换摄像头失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private inner class CameraFrameAnalyzer : ImageAnalysis.Analyzer {
+        private var lastCaptureTime = 0L
+
+        @androidx.camera.core.ExperimentalGetImage
+        override fun analyze(imageProxy: ImageProxy) {
+            // 检查 Activity 是否还在运行
+            if (isDestroyed || isFinishing) {
+                imageProxy.close()
+                return
+            }
+
+            try {
+                val currentTime = System.currentTimeMillis()
+
+                // 每隔 cameraCaptureInterval 毫秒分析一次
+                if (currentTime - lastCaptureTime >= cameraCaptureInterval) {
+                    lastCaptureTime = currentTime
+
+                    // 将 ImageProxy 转换为 Bitmap
+                    val bitmap = imageProxyToBitmap(imageProxy)
+                    if (bitmap != null && !isDestroyed && !isFinishing) {
+                        // 执行姿态检测
+                        if (poseDetector != null) {
+                            val inputImage = InputImage.fromBitmap(bitmap, 0)
+                            poseDetector?.process(inputImage)
+                                ?.addOnSuccessListener { pose ->
+                                    // 使用绿色骨骼标记绘制姿态 (in-place)
+                                    val poseBitmap = drawPoseLandmarksInPlace(bitmap, pose)
+                                    // 更新姿态覆盖层
+                                    runOnUiThread {
+                                        if (!isDestroyed && !isFinishing) {
+                                            try {
+                                                binding.cameraPoseOverlay.setImageBitmap(poseBitmap)
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                            }
+                                        }
+                                    }
+                                }
+                                ?.addOnFailureListener { e ->
+                                    e.printStackTrace()
+                                }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("CameraFrameAnalyzer", "分析失败: ${e.message}")
+            } finally {
+                imageProxy.close()
+            }
+        }
+
+        /**
+         * 优化版：直接 YUV 转 RGB/Bitmap，跳过 JPEG 编解码中间步骤
+         * 原流程：YUV → NV21 → JPEG 压缩 → JPEG 解码 → Bitmap (耗时约 30-50ms)
+         * 优化后：YUV → RGB int[] → Bitmap (耗时约 5-10ms)
+         */
+        private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
+            try {
+                // 检查平面数量
+                if (imageProxy.planes.size < 3) {
+                    Log.e("CameraFrameAnalyzer", "图像平面数量不足: ${imageProxy.planes.size}")
+                    return null
+                }
+
+                val width = imageProxy.width
+                val height = imageProxy.height
+                val yBuffer = imageProxy.planes[0].buffer
+                val uBuffer = imageProxy.planes[1].buffer
+                val vBuffer = imageProxy.planes[2].buffer
+
+                // 直接从 buffer 读取 YUV 数据
+                val ySize = yBuffer.remaining()
+                yBuffer.position(0)
+                val yData = ByteArray(ySize)
+                yBuffer.get(yData)
+
+                // 获取 UV 平面的参数
+                val uvPixelStride = imageProxy.planes[1].pixelStride
+                val uvRowStride = imageProxy.planes[1].rowStride
+
+                // 创建 RGB 像素数组
+                val argb = IntArray(width * height)
+
+                // 直接 YUV 转 ARGB（避免 NV21 中间格式和 JPEG 编解码）
+                for (j in 0 until height) {
+                    for (i in 0 until width) {
+                        val yIndex = j * imageProxy.planes[0].rowStride + i
+                        val y = yData[yIndex].toInt() and 0xFF
+
+                        // UV 采样（每 2x2 像素共享一个 UV）
+                        val uvIndex = (j / 2) * uvRowStride + (i / 2) * uvPixelStride
+                        val u = (uBuffer.get(uvIndex).toInt() and 0xFF) - 128
+                        val v = (vBuffer.get(uvIndex).toInt() and 0xFF) - 128
+
+                        // YUV to RGB 转换（使用整数运算优化）
+                        var r = y + ((1436 * v) shr 10)
+                        var g = y - ((352 * u + 731 * v) shr 10)
+                        var b = y + ((1814 * u) shr 10)
+
+                        // 钳制到 0-255 范围
+                        r = r.coerceIn(0, 255)
+                        g = g.coerceIn(0, 255)
+                        b = b.coerceIn(0, 255)
+
+                        // 组合为 ARGB 像素（不透明）
+                        argb[j * width + i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                    }
+                }
+
+                // 直接创建 Bitmap
+                var bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.setPixels(argb, 0, width, 0, 0, width, height)
+
+                // 根据旋转角度旋转图像
+                val rotation = imageProxy.imageInfo.rotationDegrees
+                if (rotation != 0 && bitmap != null) {
+                    val matrix = android.graphics.Matrix()
+                    matrix.postRotate(rotation.toFloat())
+                    val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                    bitmap.recycle()
+                    bitmap = rotatedBitmap
+                }
+
+                // 使用性能管理器推荐的图像最大尺寸进行缩放
+                if (bitmap != null) {
+                    val maxDimension = performanceManager.getRecommendedImageMaxDimension()
+                    if (bitmap.width > maxDimension || bitmap.height > maxDimension) {
+                        val scaledBitmap = imageCacheManager.scaleBitmap(bitmap, maxDimension)
+                        bitmap.recycle()
+                        bitmap = scaledBitmap
+                    }
+                }
+
+                return bitmap
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("CameraFrameAnalyzer", "转换 Bitmap 失败: ${e.message}")
+                return null
+            }
+        }
     }
 }

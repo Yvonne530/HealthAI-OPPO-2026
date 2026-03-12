@@ -9,10 +9,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("app-release.jks")
-            storePassword = "123456"
-            keyAlias = "app-release-key"
-            keyPassword = "123456"
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -86,6 +86,15 @@ dependencies {
 
     // MediaPipe Pose 姿态检测
     implementation("com.google.mlkit:pose-detection:17.0.0")
+    
+    // CameraX 实时视频捕获
+    val camerax_version = "1.3.4"
+    implementation("androidx.camera:camera-core:$camerax_version")
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-video:$camerax_version")
+    implementation("androidx.camera:camera-view:$camerax_version")
+    implementation("androidx.camera:camera-extensions:$camerax_version")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

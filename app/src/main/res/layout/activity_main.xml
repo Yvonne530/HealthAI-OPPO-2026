@@ -505,6 +505,27 @@
 
                         </LinearLayout>
 
+                        <Button
+                            android:id="@+id/buttonReloadModel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="重新加载模型"
+                            android:backgroundTint="#FF5722"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="16dp"
+                            android:layout_marginTop="16dp"
+                            android:layout_marginBottom="16dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="注意：修改参数后需要重新加载模型才能生效"
+                            android:textSize="11sp"
+                            android:textColor="#FF9800"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="12dp" />
+
                     </LinearLayout>
                 </ScrollView>
 
@@ -575,6 +596,56 @@
 
                         </FrameLayout>
 
+                        <!-- 实时摄像头捕获预览 -->
+                        <FrameLayout
+                            android:id="@+id/cameraPreviewSection"
+                            android:layout_width="match_parent"
+                            android:layout_height="400dp"
+                            android:background="#F0F0F0"
+                            android:visibility="gone">
+
+                            <androidx.camera.view.PreviewView
+                                android:id="@+id/previewView"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent" />
+
+                            <!-- 骨骼检测覆盖层 -->
+                            <ImageView
+                                android:id="@+id/cameraPoseOverlay"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <!-- 控制按钮区域 -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom|center"
+                                android:layout_marginBottom="16dp"
+                                android:orientation="horizontal"
+                                android:gravity="center">
+
+                                <Button
+                                    android:id="@+id/buttonSwitchCamera"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="切换摄像头"
+                                    android:backgroundTint="#2196F3"
+                                    android:textSize="12sp"
+                                    android:layout_marginEnd="8dp" />
+
+                                <Button
+                                    android:id="@+id/buttonStopCameraCapture"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="停止"
+                                    android:backgroundTint="#E53935"
+                                    android:textSize="12sp" />
+
+                            </LinearLayout>
+
+                        </FrameLayout>
+
                         <TextView
                             android:id="@+id/textViewRecognitionPlaceholder"
                             android:layout_width="match_parent"
@@ -605,7 +676,9 @@
                             android:textColor="@color/text_secondary"
                             android:padding="12dp"
                             android:background="@drawable/bg_surface"
-                            android:minHeight="100dp" />
+                            android:minHeight="100dp"
+                            android:textIsSelectable="true"
+                            android:longClickable="true" />
 
                     </LinearLayout>
                 </ScrollView>
@@ -642,6 +715,14 @@
                             android:backgroundTint="#4CAF50" />
 
                     </LinearLayout>
+
+                    <Button
+                        android:id="@+id/buttonStartCameraCapture"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="实时摄像头"
+                        android:backgroundTint="#673AB7"
+                        android:layout_marginBottom="8dp" />
 
                     <Button
                         android:id="@+id/buttonStartRecognitionAnalysis"
