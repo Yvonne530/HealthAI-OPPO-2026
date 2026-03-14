@@ -1403,7 +1403,7 @@ class MainActivity : AppCompatActivity() {
                     return@Thread
                 }
 
-                val result = nativeLoadModel(modelPath, mmprojPath ?: "", systemPrompt, maxTokens, contextSize, temperature, topP, topK)
+                val result = nativeLoadModel(modelPath, mmprojPath ?: "", buildSystemPromptWithKnowledge(), maxTokens, contextSize, temperature, topP, topK)
 
                 Handler(Looper.getMainLooper()).post {
                     if (clearChat) {
@@ -1536,6 +1536,53 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    /**
+     * 加载 assets/knowledge/ 目录中的知识库文件
+     */
+    private fun loadKnowledgeFiles(): String {
+        val knowledgeDir = "knowledge/"
+        val builder = StringBuilder()
+        
+        try {
+            val files = assets.list(knowledgeDir) ?: return ""
+            for (fileName in files) {
+                if (fileName.endsWith(".txt") || fileName.endsWith(".md")) {
+                    try {
+                        val content = assets.open("$knowledgeDir$fileName").bufferedReader().use { it.readText() }
+                        builder.append("【$fileName】\n$content\n\n")
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "读取知识库文件失败: $fileName", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "读取知识库失败", e)
+        }
+        
+        return builder.toString()
+    }
+
+    /**
+     * 构建包含知识库的系统提示词
+     */
+    private fun buildSystemPromptWithKnowledge(): String {
+        val knowledgeContent = loadKnowledgeFiles()
+        
+        return if (knowledgeContent.isNotEmpty()) {
+            """
+            $systemPrompt
+            
+            ====== 本地知识库 ======
+            $knowledgeContent
+            ====== 知识库结束 ======
+            
+            请优先根据以上知识库内容回答用户问题。如果知识库中没有相关信息，可以根据你的知识进行回答，但要说明这不是来自知识库。
+            """.trimIndent()
+        } else {
+            systemPrompt
+        }
     }
 
     private fun updateSystemPromptDisplay() {
@@ -1776,7 +1823,7 @@ class MainActivity : AppCompatActivity() {
 
             if (originalBitmap != null) {
                 // 压缩图片到合适的大小 (最大宽度800px) - 只缩放一次
-                val maxDimension = 800
+                val maxDimension = 500
                 val ratio = maxDimension.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
                 val newWidth = (originalBitmap.width * ratio).toInt()
                 val newHeight = (originalBitmap.height * ratio).toInt()
@@ -1790,7 +1837,7 @@ class MainActivity : AppCompatActivity() {
                 
                 // 缓存缩放后的 bitmap
                 recognitionBitmap = compressedBitmap
-                binding.imageViewRecognition.setImageBitmap(compressedBitmap)
+                binding.imageViewOriginal.setImageBitmap(compressedBitmap)  // 显示原图
 
                 binding.recognitionImageSection.visibility = View.VISIBLE
                 binding.textViewRecognitionPlaceholder.visibility = View.GONE
@@ -1871,8 +1918,12 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val pose = detectPoseSync(bitmap)
                     if (pose != null) {
-                        // in-place 绘制骨骼，无需复制 bitmap
-                        processedBitmap = drawPoseLandmarksInPlace(bitmap, pose)
+                        // 先裁剪到骨骼区域（减少分析范围，提高效率）
+                        val (croppedBitmap, offset) = cropToPoseRegion(bitmap, pose)
+                        val offsetX = offset.first
+                        val offsetY = offset.second
+                        // 在裁剪后的图片上绘制骨骼（使用偏移量调整坐标）
+                        processedBitmap = drawPoseLandmarksInPlace(croppedBitmap, pose, offsetX, offsetY)
                         poseInfo = buildPoseInfoText(pose)
                         Log.d("MainActivity", "骨骼绘制完成，尺寸: ${processedBitmap.width}x${processedBitmap.height}")
                     }
@@ -2026,8 +2077,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 在图片上绘制骨骼关键点和连线 (优化版：in-place 绘制)
-    private fun drawPoseLandmarksInPlace(bitmap: Bitmap, pose: Pose): Bitmap {
-        Log.d("MainActivity", "开始绘制骨骼 (in-place)，图片尺寸: ${bitmap.width}x${bitmap.height}")
+    // offsetX, offsetY: 骨骼坐标相对于裁剪区域的偏移量（用于裁剪后正确绘制）
+    private fun drawPoseLandmarksInPlace(bitmap: Bitmap, pose: Pose, offsetX: Int = 0, offsetY: Int = 0): Bitmap {
+        Log.d("MainActivity", "开始绘制骨骼 (in-place)，图片尺寸: ${bitmap.width}x${bitmap.height}, 偏移($offsetX, $offsetY)")
 
         // 只有在 bitmap 不可变时才复制
         val canvasBitmap = if (bitmap.isMutable) {
@@ -2072,8 +2124,8 @@ class MainActivity : AppCompatActivity() {
             val end = pose.getPoseLandmark(endType)
             if (start != null && end != null) {
                 canvas.drawLine(
-                    start.position.x, start.position.y,
-                    end.position.x, end.position.y,
+                    start.position.x - offsetX, start.position.y - offsetY,
+                    end.position.x - offsetX, end.position.y - offsetY,
                     linePaint
                 )
             }
@@ -2095,7 +2147,7 @@ class MainActivity : AppCompatActivity() {
         for (landmarkType in landmarkTypes) {
             val landmark = pose.getPoseLandmark(landmarkType)
             if (landmark != null) {
-                canvas.drawCircle(landmark.position.x, landmark.position.y, 10f, paint)
+                canvas.drawCircle(landmark.position.x - offsetX, landmark.position.y - offsetY, 10f, paint)
             }
         }
 
@@ -2130,6 +2182,59 @@ class MainActivity : AppCompatActivity() {
         }
 
         return sb.toString()
+    }
+
+    // 裁剪图片到骨骼区域（减少分析范围，提高效率）
+    // 返回：Pair<裁剪后的图片, Pair<偏移X, 偏移Y>>
+    private fun cropToPoseRegion(bitmap: Bitmap, pose: Pose, padding: Float = 0.3f): Pair<Bitmap, Pair<Int, Int>> {
+        val allLandmarks = pose.allPoseLandmarks
+        if (allLandmarks.isEmpty()) return Pair(bitmap, Pair(0, 0))
+
+        // 计算边界框
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = Float.MIN_VALUE
+        var maxY = Float.MIN_VALUE
+        var validCount = 0
+
+        for (landmark in allLandmarks) {
+            if (landmark.inFrameLikelihood > 0.3f) {  // 只考虑置信度高的点
+                minX = minOf(minX, landmark.position.x)
+                minY = minOf(minY, landmark.position.y)
+                maxX = maxOf(maxX, landmark.position.x)
+                maxY = maxOf(maxY, landmark.position.y)
+                validCount++
+            }
+        }
+
+        // 如果没有有效关键点，返回原图
+        if (validCount < 3) {
+            Log.d("MainActivity", "有效关键点不足，跳过裁剪")
+            return Pair(bitmap, Pair(0, 0))
+        }
+
+        // 添加边距
+        val width = maxX - minX
+        val height = maxY - minY
+        minX = (minX - width * padding).coerceAtLeast(0f)
+        minY = (minY - height * padding).coerceAtLeast(0f)
+        maxX = (maxX + width * padding).coerceAtMost(bitmap.width.toFloat())
+        maxY = (maxY + height * padding).coerceAtMost(bitmap.height.toFloat())
+
+        // 确保裁剪区域有效
+        val left = minX.toInt()
+        val top = minY.toInt()
+        val cropWidth = (maxX - minX).toInt().coerceAtLeast(1)
+        val cropHeight = (maxY - minY).toInt().coerceAtLeast(1)
+
+        // 边界检查
+        if (left + cropWidth > bitmap.width || top + cropHeight > bitmap.height) {
+            Log.d("MainActivity", "裁剪边界超出图片范围，返回原图")
+            return Pair(bitmap, Pair(0, 0))
+        }
+
+        Log.d("MainActivity", "裁剪骨骼区域: 原图 ${bitmap.width}x${bitmap.height} -> 裁剪 ${cropWidth}x${cropHeight}, 偏移($left, $top)")
+        return Pair(Bitmap.createBitmap(bitmap, left, top, cropWidth, cropHeight), Pair(left, top))
     }
 
     // ========== 实时摄像头功能 ==========

@@ -201,7 +201,7 @@ Java_com_erlab_actuaware_MainActivity_nativeLoadModel(
     if (mmprojPath) env->ReleaseStringUTFChars(mmprojPath, mmprojPathCStr);
     if (systemPrompt) env->ReleaseStringUTFChars(systemPrompt, systemPromptCStr);
 
-    std::string resultMsg = "模型加载成功！\n\n性能优化已启用:\n- 上下文大小: " + std::to_string(g_context_size) + "\n- 线程数: 8\n- 批处理大小: 512\n- Flash Attention: 启用\n";
+    std::string resultMsg = "模型加载成功！\n\n性能优化已启用:\n- 上下文大小: " + std::to_string(g_context_size) + "\n- 线程数: " + std::to_string(g_n_threads) + "\n- 批处理大小: " + std::to_string(g_n_batch) + "\n- GPU层数: " + std::to_string(g_n_gpu_layers) + "\n- Flash Attention: " + (g_enable_flash_attention ? "启用" : "禁用") + "\n";
     if (g_mtmd_ctx || g_supportsMultimodalInModel) {
         resultMsg += "多模态功能已启用，可以分析图片。";
     } else {

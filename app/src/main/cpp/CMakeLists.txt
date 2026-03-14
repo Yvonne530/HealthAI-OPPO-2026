@@ -17,11 +17,16 @@ if(ANDROID_ABI STREQUAL "arm64-v8a")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-a72")
 endif()
 
+# ========== GPU 后端配置 ==========
+# 禁用所有 GPU 后端，使用 CPU 模式
+set(GGML_VULKAN OFF CACHE BOOL "Disable Vulkan GPU backend" FORCE)
+set(GGML_OPENCL OFF CACHE BOOL "Disable OpenCL GPU backend" FORCE)
+message(STATUS "GPU 后端已禁用，使用 CPU 模式")
+
 # 查找必要的包
 find_package(Threads REQUIRED)
 
 # 添加llama.cpp库
-# 注意：需要先下载llama.cpp源代码到这个目录
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp")
     message(STATUS "llama.cpp source not found, please download it first")
 endif()
@@ -32,34 +37,33 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp")
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/include)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/include)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/src)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/common)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/src)
+    
+    # 添加 mtmd 头文件路径
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd")
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd)
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models)
+    endif()
 endif()
 
 # 添加mtmd库（多模态支持）
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd")
+    # 检查是否有 models 子目录
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models")
+        file(GLOB MTMD_MODEL_SOURCES 
+            "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/*.cpp"
+        )
+    else()
+        set(MTMD_MODEL_SOURCES "")
+    endif()
+    
     # mtmd源文件
     set(MTMD_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/mtmd.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/mtmd-audio.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/mtmd-helper.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/clip.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/models.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/cogvlm.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/conformer.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/glm4v.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/internvl.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/kimivl.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/llama4.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/llava.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/minicpmv.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/pixtral.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/qwen2vl.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/qwen3vl.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/siglip.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/whisper-enc.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/mobilenetv5.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/youtuvl.cpp
+        ${MTMD_MODEL_SOURCES}
     )
 
     add_library(mtmd STATIC ${MTMD_SOURCES})
