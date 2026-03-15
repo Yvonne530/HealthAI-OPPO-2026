@@ -174,6 +174,7 @@ Java_com_erlab_actuaware_MainActivity_nativeLoadModel(
 
     struct llama_sampler_chain_params sparams = llama_sampler_chain_default_params();
     g_sampler = llama_sampler_chain_init(sparams);
+    llama_sampler_chain_add(g_sampler, llama_sampler_init_penalties(64, 1.1, 0.0, 0.0)); // 重复惩罚: 惩罚最近64个token，系数1.1
     llama_sampler_chain_add(g_sampler, llama_sampler_init_top_k(g_top_k));           // Top-K
     llama_sampler_chain_add(g_sampler, llama_sampler_init_top_p(g_top_p, 1));        // Top-P
     llama_sampler_chain_add(g_sampler, llama_sampler_init_min_p(0.05, 1));          // min_p: 过滤概率太低的token
@@ -245,7 +246,8 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
     // 清理 KV cache，避免之前对话的干扰
     llama_memory_t mem = llama_get_memory(g_ctx);
     llama_memory_clear(mem, true);
-    LOGI("已清理 KV cache");
+    llama_memory_seq_rm(mem, -1, -1, -1);  // 移除所有序列
+    LOGI("已清理 KV cache 和所有序列");
 
     if (!g_mtmd_ctx) {
         return env->NewStringUTF("请先加载多模态文件(mmproj)以支持图片分析功能");
