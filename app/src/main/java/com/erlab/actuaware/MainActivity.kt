@@ -120,6 +120,13 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         init {
+            // 尝试加载 OpenCL 库（如果设备支持）
+            try {
+                System.load("/system/vendor/lib64/libOpenCL.so")
+            } catch (e: UnsatisfiedLinkError) {
+                // 设备不支持 OpenCL，使用 CPU 回退
+                android.util.Log.w("MainActivity", "OpenCL not available, using CPU backend")
+            }
             System.loadLibrary("llama_jni")
         }
     }

@@ -18,10 +18,30 @@ if(ANDROID_ABI STREQUAL "arm64-v8a")
 endif()
 
 # ========== GPU 后端配置 ==========
-# 禁用所有 GPU 后端，使用 CPU 模式
+# 启用 OpenCL GPU 后端
 set(GGML_VULKAN OFF CACHE BOOL "Disable Vulkan GPU backend" FORCE)
-set(GGML_OPENCL OFF CACHE BOOL "Disable OpenCL GPU backend" FORCE)
-message(STATUS "GPU 后端已禁用，使用 CPU 模式")
+set(GGML_OPENCL ON CACHE BOOL "Enable OpenCL GPU backend" FORCE)
+message(STATUS "OpenCL GPU 后端已启用")
+
+# Android OpenCL 配置
+if(ANDROID)
+    # Android 上的 OpenCL 库由设备厂商提供，NDK 不包含
+    # 创建 stub 库用于编译链接，运行时加载系统库
+    set(OpenCL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/opencl-headers" CACHE PATH "OpenCL include" FORCE)
+    
+    # 创建 stub 静态库提供链接符号
+    add_library(OpenCL STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/opencl-headers/opencl_stub.c
+    )
+    target_include_directories(OpenCL PUBLIC "${OpenCL_INCLUDE_DIR}")
+    
+    # 设置 find_package 使用我们的配置
+    set(OpenCL_FOUND TRUE CACHE BOOL "OpenCL found" FORCE)
+    set(OpenCL_LIBRARIES OpenCL CACHE STRING "OpenCL libraries" FORCE)
+    set(OpenCL_INCLUDE_DIRS "${OpenCL_INCLUDE_DIR}" CACHE STRING "OpenCL include dirs" FORCE)
+    
+    message(STATUS "Android OpenCL: Using stub library, runtime will load /system/vendor/lib64/libOpenCL.so")
+endif()
 
 # 查找必要的包
 find_package(Threads REQUIRED)

@@ -242,6 +242,11 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
         return env->NewStringUTF("请先加载模型");
     }
 
+    // 清理 KV cache，避免之前对话的干扰
+    llama_memory_t mem = llama_get_memory(g_ctx);
+    llama_memory_clear(mem, true);
+    LOGI("已清理 KV cache");
+
     if (!g_mtmd_ctx) {
         return env->NewStringUTF("请先加载多模态文件(mmproj)以支持图片分析功能");
     }
@@ -357,30 +362,38 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
 
         generated_tokens.push_back(token);
 
-        // 每3个token回调一次
-        if (generated_tokens.size() % 3 == 0) {
-            std::string partial_text;
-            char buffer[256];
-            for (size_t j = 0; j < generated_tokens.size(); j++) {
-                int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
-                if (n > 0) partial_text.append(buffer, n);
+        // 构建当前文本用于反提示检测
+        std::string partial_text;
+        char buffer[256];
+        for (size_t j = 0; j < generated_tokens.size(); j++) {
+            int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
+            if (n > 0) partial_text.append(buffer, n);
+        }
+
+        // 每个 token 都检测反提示
+        if (containsAntiprompt(partial_text)) {
+            size_t pos = partial_text.find("USER:");
+            if (pos == std::string::npos) pos = partial_text.find("User:");
+            if (pos == std::string::npos) pos = partial_text.find("user:");
+            if (pos != std::string::npos) {
+                partial_text = partial_text.substr(0, pos);
             }
-            
-            if (containsAntiprompt(partial_text)) {
-                size_t pos = partial_text.find("USER:");
-                if (pos == std::string::npos) pos = partial_text.find("User:");
-                if (pos == std::string::npos) pos = partial_text.find("user:");
-                if (pos != std::string::npos) {
-                    partial_text = partial_text.substr(0, pos);
-                }
-                std::string cleaned_text = cleanUTF8String(partial_text);
-                streamingCallback(cleaned_text);
-                antiprompt_detected = true;
-                break;
-            }
-            
             std::string cleaned_text = cleanUTF8String(partial_text);
             streamingCallback(cleaned_text);
+            antiprompt_detected = true;
+            break;
+        }
+
+        // 每3个token回调一次（仅用于UI更新）
+        if (generated_tokens.size() % 3 == 0) {
+            std::string cleaned_text = cleanUTF8String(partial_text);
+            streamingCallback(cleaned_text);
+        }
+
+        // 检测到反提示，停止生成
+        if (antiprompt_detected) {
+            LOGI("检测到反提示，停止生成");
+            break;
         }
 
         llama_batch ob = llama_batch_init(1, 0, 1);
