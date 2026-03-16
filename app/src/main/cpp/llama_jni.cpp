@@ -531,14 +531,32 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
 
         generated_tokens.push_back(token);
 
+        // 构建当前文本用于反提示检测
+        std::string partial_text;
+        char buffer[256];
+        for (size_t j = 0; j < generated_tokens.size(); j++) {
+            int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
+            if (n > 0) partial_text.append(buffer, n);
+        }
+
+        // 检测反提示（如 USER:），如果模型开始生成用户消息格式，则停止
+        if (containsAntiprompt(partial_text)) {
+            LOGI("nativeChat 检测到反提示，停止生成并截断");
+            // 截断反提示部分
+            size_t pos = partial_text.find("USER:");
+            if (pos == std::string::npos) pos = partial_text.find("User:");
+            if (pos == std::string::npos) pos = partial_text.find("user:");
+            if (pos != std::string::npos) {
+                partial_text = partial_text.substr(0, pos);
+            }
+            // 回调截断后的文本并退出循环
+            std::string cleaned_text = cleanUTF8String(partial_text);
+            streamingCallback(cleaned_text);
+            break;
+        }
+
         // 每3个token回调一次
         if (generated_tokens.size() % 3 == 0) {
-            std::string partial_text;
-            char buffer[256];
-            for (size_t j = 0; j < generated_tokens.size(); j++) {
-                int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
-                if (n > 0) partial_text.append(buffer, n);
-            }
             // 清理 UTF-8 字符，避免 JNI 崩溃
             std::string cleaned_text = cleanUTF8String(partial_text);
             streamingCallback(cleaned_text);
@@ -566,6 +584,16 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
             int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
             if (n > 0) partial_text.append(buffer, n);
         }
+        // 检测并截断反提示
+        if (containsAntiprompt(partial_text)) {
+            size_t pos = partial_text.find("USER:");
+            if (pos == std::string::npos) pos = partial_text.find("User:");
+            if (pos == std::string::npos) pos = partial_text.find("user:");
+            if (pos != std::string::npos) {
+                partial_text = partial_text.substr(0, pos);
+                LOGI("nativeChat最终回调截断反提示，保留 %zu 字符", pos);
+            }
+        }
         // 清理 UTF-8 字符，避免 JNI 崩溃
         std::string cleaned_text = cleanUTF8String(partial_text);
         LOGI("nativeChat最终回调文本长度: %zu", cleaned_text.length());
@@ -580,8 +608,30 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
         int32_t n = llama_token_to_piece(vocab, generated_tokens[i], buffer, sizeof(buffer), 0, true);
         if (n > 0) generated_text.append(buffer, n);
     }
+    // 最终文本也截断反提示
+    if (containsAntiprompt(generated_text)) {
+        size_t pos = generated_text.find("USER:");
+        if (pos == std::string::npos) pos = generated_text.find("User:");
+        if (pos == std::string::npos) pos = generated_text.find("user:");
+        if (pos != std::string::npos) {
+            generated_text = generated_text.substr(0, pos);
+            LOGI("nativeChat返回文本截断反提示，保留 %zu 字符", pos);
+        }
+    }
 
     g_conversationTokens.insert(g_conversationTokens.end(), generated_tokens.begin(), generated_tokens.end());
+
+    // 在回答末尾添加换行符，确保下一轮对话格式正确
+    // 对话格式: USER: xxx\nASSISTANT: yyy\n
+    std::string newlineStr = "\n";
+    std::vector<llama_token> newlineTokens;
+    newlineTokens.resize(2);
+    int32_t newlineN = llama_tokenize(vocab, newlineStr.c_str(), newlineStr.size(), newlineTokens.data(), newlineTokens.size(), false, false);
+    if (newlineN > 0) {
+        newlineTokens.resize(newlineN);
+        g_conversationTokens.insert(g_conversationTokens.end(), newlineTokens.begin(), newlineTokens.end());
+        LOGI("nativeChat 已在回答末尾添加换行符");
+    }
 
     std::string cleaned = cleanUTF8String(generated_text);
     return env->NewStringUTF(cleaned.c_str());

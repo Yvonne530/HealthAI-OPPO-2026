@@ -584,10 +584,12 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical">
 
-                                <!-- 原图显示在上半部分 -->
+                                <!-- 原图显示区域已隐藏 -->
                                 <FrameLayout
+                                    android:id="@+id/frameLayoutOriginal"
                                     android:layout_width="match_parent"
-                                    android:layout_height="wrap_content">
+                                    android:layout_height="wrap_content"
+                                    android:visibility="gone">
 
                                     <ImageView
                                         android:id="@+id/imageViewOriginal"
@@ -607,11 +609,13 @@
                                         android:layout_margin="4dp" />
                                 </FrameLayout>
 
-                                <!-- 分隔线 -->
+                                <!-- 分隔线已隐藏 -->
                                 <View
+                                    android:id="@+id/viewDivider"
                                     android:layout_width="match_parent"
                                     android:layout_height="2dp"
-                                    android:background="#CCCCCC" />
+                                    android:background="#CCCCCC"
+                                    android:visibility="gone" />
 
                                 <!-- 裁剪+绘制图显示在下半部分 -->
                                 <FrameLayout

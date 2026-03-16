@@ -12,10 +12,6 @@ data class HistoryItem(
     val date: String,
     val preview: String,
     val data: String,
-    val modelPath: String = "",
-    val mmprojPath: String = "",
-    val maxTokens: Int = 512,
-    val contextSize: Int = 8192,
     val enableNetwork: Boolean = false,
     val systemPrompt: String = "你是一个有用的助手。"
 )

@@ -41,10 +41,7 @@ class HistoryHelper(private val context: Context) {
                             date = jsonObject.getString("date"),
                             preview = jsonObject.getString("preview"),
                             data = jsonObject.getString("data"),
-                            modelPath = jsonObject.optString("modelPath", ""),
-                            mmprojPath = jsonObject.optString("mmprojPath", ""),
-                            maxTokens = jsonObject.optInt("maxTokens", 512),
-                            contextSize = jsonObject.optInt("contextSize", 8192),
+                            // 模型字段已弃用，但仍用 optString 读取以保持向后兼容
                             enableNetwork = jsonObject.optBoolean("enableNetwork", false),
                             systemPrompt = jsonObject.optString("systemPrompt", "你是一个有用的助手。")
                         )
@@ -73,13 +70,10 @@ class HistoryHelper(private val context: Context) {
                 put("date", historyItem.date)
                 put("preview", historyItem.preview)
                 put("data", historyItem.data)
-                put("modelPath", historyItem.modelPath)
-                put("mmprojPath", historyItem.mmprojPath)
-                put("maxTokens", historyItem.maxTokens)
-                put("contextSize", historyItem.contextSize)
+                // 不再保存模型相关字段
                 put("enableNetwork", historyItem.enableNetwork)
-                                put("systemPrompt", historyItem.systemPrompt)
-                            }
+                put("systemPrompt", historyItem.systemPrompt)
+            }
                             file.writeText(jsonObject.toString())
                             true
                         } catch (e: Exception) {
@@ -123,10 +117,7 @@ class HistoryHelper(private val context: Context) {
                                 date = jsonObject.getString("date"),
                                 preview = jsonObject.getString("preview"),
                                 data = jsonObject.getString("data"),
-                                modelPath = jsonObject.optString("modelPath", ""),
-                                mmprojPath = jsonObject.optString("mmprojPath", ""),
-                                maxTokens = jsonObject.optInt("maxTokens", 512),
-                                contextSize = jsonObject.optInt("contextSize", 8192),
+                                // 模型字段已弃用，但仍用 optString 读取以保持向后兼容
                                 enableNetwork = jsonObject.optBoolean("enableNetwork", false),
                                 systemPrompt = jsonObject.optString("systemPrompt", "你是一个有用的助手。")
                             )

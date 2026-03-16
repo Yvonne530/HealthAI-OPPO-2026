@@ -1235,8 +1235,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             systemPrompt = historyItem.systemPrompt
-            maxTokens = historyItem.maxTokens
-            contextSize = historyItem.contextSize
             enableNetwork = historyItem.enableNetwork
 
             currentHistoryId = historyItem.id
@@ -1245,57 +1243,23 @@ class MainActivity : AppCompatActivity() {
             showChatView()
             binding.bottomNav.selectedItemId = R.id.navigation_chat
 
-            if (historyItem.modelPath.isNotEmpty()) {
-                val modelFile = File(historyItem.modelPath)
-                if (modelFile.exists()) {
-                    cachedModelPath = historyItem.modelPath
-                    cachedMmprojPath = if (historyItem.mmprojPath.isNotEmpty()) historyItem.mmprojPath else null
-
-                    Log.d("MainActivity", "开始加载模型: $cachedModelPath")
-                    // 在后台加载模型
-                    loadModelInBackground(
-                        clearChat = false,
-                        onLoadSuccess = {
-                            // 模型加载成功后，恢复对话历史到 JNI 层
-                            loadConversationHistoryToJNI { success ->
-                                if (success) {
-                                    Log.d("MainActivity", "历史记录上下文恢复成功")
-                                } else {
-                                    Log.e("MainActivity", "历史记录上下文恢复失败")
-                                }
-                            }
-                        },
-                        onLoadFailed = { error ->
-                            // 模型加载失败
-                            runOnUiThread {
-                                Toast.makeText(this, "模型加载失败: $error", Toast.LENGTH_LONG).show()
-                            }
+            // 直接用当前已加载的模型恢复上下文（忽略历史中的旧模型路径）
+            if (isModelLoaded) {
+                loadConversationHistoryToJNI { success ->
+                    if (success) {
+                        Log.d("MainActivity", "历史记录上下文恢复成功")
+                        runOnUiThread {
+                            Toast.makeText(this, "已加载历史记录", Toast.LENGTH_SHORT).show()
                         }
-                    )
-                } else {
-                    Log.w("MainActivity", "模型文件不存在: ${historyItem.modelPath}")
-                    Toast.makeText(this, "模型文件不存在", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                // 没有模型路径
-                if (isModelLoaded) {
-                    // 模型已加载，恢复对话历史到 JNI 层
-                    loadConversationHistoryToJNI { success ->
-                        if (success) {
-                            Log.d("MainActivity", "历史记录上下文恢复成功")
-                            runOnUiThread {
-                                Toast.makeText(this, "已加载历史记录", Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            Log.e("MainActivity", "历史记录上下文恢复失败")
-                            runOnUiThread {
-                                Toast.makeText(this, "加载历史记录失败", Toast.LENGTH_SHORT).show()
-                            }
+                    } else {
+                        Log.e("MainActivity", "历史记录上下文恢复失败")
+                        runOnUiThread {
+                            Toast.makeText(this, "加载历史记录失败", Toast.LENGTH_SHORT).show()
                         }
                     }
-                } else {
-                    Toast.makeText(this, "已加载历史记录（无模型）", Toast.LENGTH_SHORT).show()
                 }
+            } else {
+                Toast.makeText(this, "已加载历史记录（请先加载模型）", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Log.e("MainActivity", "加载历史记录失败", e)
@@ -1342,10 +1306,6 @@ class MainActivity : AppCompatActivity() {
                 date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
                 preview = historyText.take(100),
                 data = historyData,
-                modelPath = cachedModelPath ?: "",
-                mmprojPath = cachedMmprojPath ?: "",
-                maxTokens = maxTokens,
-                contextSize = contextSize,
                 enableNetwork = enableNetwork,
                 systemPrompt = systemPrompt
             )
@@ -1516,7 +1476,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 Thread.sleep(500)
 
-                val historyString = conversationHistory.joinToString("")
+                val historyString = conversationHistory.joinToString("\n")
                 Log.d("MainActivity", "历史记录字符串长度: ${historyString.length}")
 
                 val result = nativeRestoreContext(historyString)
@@ -1925,12 +1885,8 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val pose = detectPoseSync(bitmap)
                     if (pose != null) {
-                        // 先裁剪到骨骼区域（减少分析范围，提高效率）
-                        val (croppedBitmap, offset) = cropToPoseRegion(bitmap, pose)
-                        val offsetX = offset.first
-                        val offsetY = offset.second
-                        // 在裁剪后的图片上绘制骨骼（使用偏移量调整坐标）
-                        processedBitmap = drawPoseLandmarksInPlace(croppedBitmap, pose, offsetX, offsetY)
+                        // 直接在原图上绘制骨骼（不再裁剪）
+                        processedBitmap = drawPoseLandmarksInPlace(bitmap, pose, 0, 0)
                         poseInfo = buildPoseInfoText(pose)
                         Log.d("MainActivity", "骨骼绘制完成，尺寸: ${processedBitmap.width}x${processedBitmap.height}")
                     }
