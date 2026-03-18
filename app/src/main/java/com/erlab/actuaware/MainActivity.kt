@@ -83,6 +83,10 @@ class MainActivity : AppCompatActivity() {
     private var topP: Float = 0.9f
     private var topK: Int = 40
     private var enableNetwork: Boolean = false
+
+    // TTS 相关
+    private lateinit var ttsManager: TtsManager
+    private var enableTts: Boolean = false
     private var enableTools: Boolean = true
     private var isDarkMode: Boolean = false
     private var currentHistoryId: String = ""
@@ -374,6 +378,19 @@ class MainActivity : AppCompatActivity() {
                 .usePlugin(TablePlugin.create(this))
                 .usePlugin(TaskListPlugin.create(this))
                 .build()
+
+            // 初始化 TTS
+            ttsManager = TtsManager(this)
+            ttsManager.init()
+            ttsManager.setOnStartListener {
+                Log.d("TTS", "开始朗读")
+            }
+            ttsManager.setOnDoneListener {
+                Log.d("TTS", "朗读完成")
+            }
+            ttsManager.setOnErrorListener { error ->
+                Log.e("TTS", "错误: $error")
+            }
 
             // 根据设备性能自适应配置
             cameraCaptureInterval = performanceManager.getRecommendedCameraInterval()
@@ -742,6 +759,73 @@ class MainActivity : AppCompatActivity() {
                     recreate()
                 }
             }
+
+            // ===== 设置页面新功能区域 =====
+            // TTS 开关
+            binding.switchTts.isChecked = enableTts
+            binding.switchTts.setOnCheckedChangeListener { _, isChecked ->
+                enableTts = isChecked
+                if (isChecked) {
+                    Toast.makeText(this, "TTS 已开启", Toast.LENGTH_SHORT).show()
+                } else {
+                    stopSpeaking()
+                    Toast.makeText(this, "TTS 已关闭", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            // 系统提示词编辑框初始化
+            binding.editTextSystemPromptSettings.setText(systemPrompt)
+
+            // 保存系统提示词按钮
+            binding.buttonSaveSystemPrompt.setOnClickListener {
+                val newPrompt = binding.editTextSystemPromptSettings.text.toString().trim()
+                if (newPrompt.isNotEmpty()) {
+                    systemPrompt = newPrompt
+                    updateSystemPromptDisplay()
+                    Toast.makeText(this, "系统提示词已更新", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "系统提示词不能为空", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            // 设置页面的联网搜索开关
+            binding.switchNetworkSettings.isChecked = enableNetwork
+            binding.switchNetworkSettings.setOnCheckedChangeListener { _, isChecked ->
+                enableNetwork = isChecked
+                // 同步侧边栏的开关状态
+                binding.switchNetwork.isChecked = isChecked
+                saveCurrentHistory()
+                Toast.makeText(this, if (isChecked) "联网功能已启用" else "联网功能已禁用", Toast.LENGTH_SHORT).show()
+            }
+
+            // 设置页面的深色模式开关
+            binding.switchDarkModeSettings.isChecked = isDarkMode
+            binding.switchDarkModeSettings.setOnCheckedChangeListener { _, isChecked ->
+                if (isDarkMode != isChecked) {
+                    isDarkMode = isChecked
+                    // 同步侧边栏的开关状态
+                    binding.switchDarkMode.isChecked = isChecked
+                    saveDarkModePreference()
+                    recreate()
+                }
+            }
+
+            // 设置页面的清空对话历史按钮
+            binding.buttonClearHistorySettings.setOnClickListener {
+                conversationHistory.clear()
+                chatAdapter.clearMessages()
+                chatAdapter.addSystemMessage("对话历史已清空")
+                Toast.makeText(this, "对话历史已清空", Toast.LENGTH_SHORT).show()
+                if (isModelLoaded) {
+                    try {
+                        nativeResetChatHistory()
+                    } catch (e: Exception) {
+                    }
+                }
+            }
+
+            // 初始化设置页面的模型状态显示
+            updateSettingsModelDisplay()
 
             loadUserSettings()
 
@@ -1332,6 +1416,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.textViewModelStatus.text = "模型状态: 正在加载..."
+        binding.textViewModelStatusSettings.text = "模型状态: 正在加载..."
 
         if (clearChat) {
             chatAdapter.clearMessages()
@@ -1360,6 +1445,7 @@ class MainActivity : AppCompatActivity() {
                 if (!modelFile.exists()) {
                     Handler(Looper.getMainLooper()).post {
                         binding.textViewModelStatus.text = "模型状态: 加载失败"
+                        binding.textViewModelStatusSettings.text = "模型状态: 加载失败"
                         if (clearChat) {
                             chatAdapter.clearMessages()
                             chatAdapter.addSystemMessage("模型文件不存在: $modelPath")
@@ -1435,6 +1521,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     } else {
                         binding.textViewModelStatus.text = "模型状态: 加载失败"
+                        binding.textViewModelStatusSettings.text = "模型状态: 加载失败"
                         if (clearChat) {
                             chatAdapter.clearMessages()
                         }
@@ -1445,6 +1532,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Handler(Looper.getMainLooper()).post {
                     binding.textViewModelStatus.text = "模型状态: 加载失败"
+                    binding.textViewModelStatusSettings.text = "模型状态: 加载失败"
                     if (clearChat) {
                         chatAdapter.clearMessages()
                         chatAdapter.addSystemMessage("加载模型异常: ${e.message}\n\n${e.stackTraceToString()}")
@@ -1552,8 +1640,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 朗读 AI 回复
+    fun speakAiResponse(text: String) {
+        if (enableTts && ::ttsManager.isInitialized) {
+            ttsManager.speak(text)
+        }
+    }
+
+    // 停止朗读
+    fun stopSpeaking() {
+        if (::ttsManager.isInitialized) {
+            ttsManager.stop()
+        }
+    }
+
     private fun updateSystemPromptDisplay() {
         binding.textViewSystemPrompt.text = "系统提示词: $systemPrompt"
+        // 同时更新设置页面的系统提示词编辑框
+        binding.editTextSystemPromptSettings.setText(systemPrompt)
     }
 
     private fun saveDarkModePreference() {
@@ -1620,6 +1724,11 @@ class MainActivity : AppCompatActivity() {
                 nativeFreeModel()
             } catch (e: Exception) {
             }
+        }
+
+        // 释放 TTS 资源
+        if (::ttsManager.isInitialized) {
+            ttsManager.release()
         }
     }
 
@@ -1775,9 +1884,16 @@ class MainActivity : AppCompatActivity() {
             binding.textViewCurrentMmproj.text = "未加载多模态文件"
             binding.textViewMmprojSize.text = ""
         }
-    }
 
-    
+        // 更新设置页面的模型状态显示
+        val status = if (isModelLoaded) {
+            val modelName = cachedModelPath?.substringAfterLast("/") ?: "未知模型"
+            "模型状态: 已加载 ($modelName)"
+        } else {
+            "模型状态: 未加载"
+        }
+        binding.textViewModelStatusSettings.text = status
+    }
 
     // 缓存缩放后的识别图片，避免重复缩放
     private var recognitionBitmap: Bitmap? = null
@@ -1804,7 +1920,8 @@ class MainActivity : AppCompatActivity() {
                 
                 // 缓存缩放后的 bitmap
                 recognitionBitmap = compressedBitmap
-                binding.imageViewOriginal.setImageBitmap(compressedBitmap)  // 显示原图
+                // 选择图片后立即显示，不等待骨骼检测
+                binding.imageViewRecognition.setImageBitmap(compressedBitmap)
 
                 binding.recognitionImageSection.visibility = View.VISIBLE
                 binding.textViewRecognitionPlaceholder.visibility = View.GONE

@@ -25,6 +25,7 @@ static std::vector<llama_token> g_conversationTokens;
 static bool g_supportsMultimodalInModel = false;
 static int g_max_tokens = 512;
 static int g_context_size = 8192;
+static size_t g_prev_token_count = 0;  // 增量decode追踪
 static std::string g_mmprojPath = "";
 static float g_temperature = 0.7f;
 static float g_top_p = 0.9f;
@@ -59,30 +60,59 @@ static std::string cleanUTF8String(const std::string& input) {
     return result;
 }
 
-// 检测是否包含反提示（antiprompt），如 "USER:" 等
-// 如果模型输出了这些内容，说明它已经结束了回答并开始模拟用户输入
-static bool containsAntiprompt(const std::string& text) {
-    // 常见的反提示模式
-    const std::vector<std::string> antiprompts = {
-        "USER:",
-        "User:",
-        "user:",
+// 过滤掉模型输出的特殊 token 标签
+static std::string removeSpecialTokens(const std::string& text) {
+    std::string result = text;
+    
+    // 常见的特殊 token 标签
+    const std::vector<std::string> special_tokens = {
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|endoftext|>",
         "<|user|>",
-        "<|USER|>",
-        "[INST]",
-        "<<USER>>",
-        "\n\n用户:",
-        "\n\nUser:",
-        "\n\nUSER:"
+        "<|assistant|>",
+        "<|system|>",
+        "<|begin_of_text|>",
+        "<|end_of_text|>",
+        "<|eot_id|>",
+        "<|start_header_id|>",
+        "<|end_header_id|>"
     };
     
-    for (const auto& ap : antiprompts) {
-        if (text.find(ap) != std::string::npos) {
-            LOGI("检测到反提示: '%s'，停止生成", ap.c_str());
-            return true;
+    for (const auto& token : special_tokens) {
+        size_t pos = 0;
+        while ((pos = result.find(token, pos)) != std::string::npos) {
+            result.erase(pos, token.length());
         }
     }
+    
+    return result;
+}
+
+// 检测是否包含反提示（antiprompt），如 "USER:" 等
+// 用于防止模型在回答后继续生成假用户输入
+static bool containsAntiprompt(const std::string& text) {
+    // 只检测行首的 USER:，避免误判 markdown 内容
+    if (text.find("USER:") == 0) return true;
+    if (text.find("\nUSER:") != std::string::npos) return true;
+    if (text.find("\nUser:") != std::string::npos) return true;
+    if (text.find("\nuser:") != std::string::npos) return true;
     return false;
+}
+
+// 提取 ASSISTANT: 后面的内容（去除对话格式前缀）
+static std::string extractAssistantContent(const std::string& text) {
+    size_t pos = text.find("ASSISTANT:");
+    if (pos != std::string::npos) {
+        std::string result = text.substr(pos + 10);  // "ASSISTANT:" 长度为 10
+        // 去除开头的空格
+        size_t first_non_space = result.find_first_not_of(" \t\n\r");
+        if (first_non_space != std::string::npos) {
+            result = result.substr(first_non_space);
+        }
+        return result;
+    }
+    return text;
 }
 
 static void streamingCallback(const std::string& text) {
@@ -358,29 +388,38 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
         llama_token token = llama_sampler_sample(g_sampler, g_ctx, -1);
         llama_sampler_accept(g_sampler, token);
 
-        if (llama_vocab_is_eog(vocab, token)) {
+        // 只检测精确的 EOS token，避免 is_eog 误判
+        llama_token eos_token = llama_vocab_eos(vocab);
+        if (token == eos_token) {
+            LOGI("nativeAnalyzeImage 遇到结束标记 EOS，停止生成");
             break;
         }
 
         generated_tokens.push_back(token);
 
-        // 构建当前文本用于反提示检测
-        std::string partial_text;
-        char buffer[256];
-        for (size_t j = 0; j < generated_tokens.size(); j++) {
-            int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
-            if (n > 0) partial_text.append(buffer, n);
+        // 增量构建文本（O(1)而非O(n²)）
+        static std::string cached_partial_text;
+        if (generated_tokens.size() == 1) {
+            cached_partial_text.clear();
         }
+        char buffer[256];
+        int32_t n = llama_token_to_piece(vocab, token, buffer, sizeof(buffer), 0, true);
+        if (n > 0) {
+            cached_partial_text.append(buffer, n);
+        }
+        const std::string& partial_text = cached_partial_text;
 
         // 每个 token 都检测反提示
         if (containsAntiprompt(partial_text)) {
-            size_t pos = partial_text.find("USER:");
-            if (pos == std::string::npos) pos = partial_text.find("User:");
-            if (pos == std::string::npos) pos = partial_text.find("user:");
+            std::string truncated = partial_text;
+            size_t pos = truncated.find("USER:");
+            if (pos == std::string::npos) pos = truncated.find("User:");
+            if (pos == std::string::npos) pos = truncated.find("user:");
             if (pos != std::string::npos) {
-                partial_text = partial_text.substr(0, pos);
+                truncated = truncated.substr(0, pos);
             }
-            std::string cleaned_text = cleanUTF8String(partial_text);
+            std::string cleaned_text = cleanUTF8String(truncated);
+            cleaned_text = removeSpecialTokens(cleaned_text);
             streamingCallback(cleaned_text);
             antiprompt_detected = true;
             break;
@@ -389,6 +428,7 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
         // 每3个token回调一次（仅用于UI更新）
         if (generated_tokens.size() % 3 == 0) {
             std::string cleaned_text = cleanUTF8String(partial_text);
+            cleaned_text = removeSpecialTokens(cleaned_text);
             streamingCallback(cleaned_text);
         }
 
@@ -409,29 +449,33 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
         llama_batch_free(ob);
     }
 
-    // 最终回调
+    // 最终回调（直接使用已缓存的文本）
     if (!generated_tokens.empty() && !antiprompt_detected) {
-        std::string partial_text;
+        static std::string cached_partial_text_final;
+        cached_partial_text_final.clear();
         char buffer[256];
         for (size_t j = 0; j < generated_tokens.size(); j++) {
             int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
-            if (n > 0) partial_text.append(buffer, n);
+            if (n > 0) cached_partial_text_final.append(buffer, n);
         }
         
-        if (containsAntiprompt(partial_text)) {
-            size_t pos = partial_text.find("USER:");
-            if (pos == std::string::npos) pos = partial_text.find("User:");
-            if (pos == std::string::npos) pos = partial_text.find("user:");
+        if (containsAntiprompt(cached_partial_text_final)) {
+            size_t pos = cached_partial_text_final.find("USER:");
+            if (pos == std::string::npos) pos = cached_partial_text_final.find("User:");
+            if (pos == std::string::npos) pos = cached_partial_text_final.find("user:");
             if (pos != std::string::npos) {
-                partial_text = partial_text.substr(0, pos);
+                cached_partial_text_final = cached_partial_text_final.substr(0, pos);
             }
         }
         
-        std::string cleaned_text = cleanUTF8String(partial_text);
+        std::string cleaned_text = cleanUTF8String(cached_partial_text_final);
+        cleaned_text = removeSpecialTokens(cleaned_text);
         streamingCallback(cleaned_text);
     }
     
-    std::string generated_text;
+    // 构建 generated_text（复用 cached_partial_text）
+    static std::string generated_text;
+    generated_text.clear();
     char buffer[256];
     for (size_t i = 0; i < generated_tokens.size(); i++) {
         int32_t n = llama_token_to_piece(vocab, generated_tokens[i], buffer, sizeof(buffer), 0, true);
@@ -451,6 +495,7 @@ Java_com_erlab_actuaware_MainActivity_nativeAnalyzeImageDirect(
     mtmd_bitmap_free(bitmap);
 
     std::string cleaned = cleanUTF8String(generated_text);
+    cleaned = removeSpecialTokens(cleaned);
     return env->NewStringUTF(("图片分析结果:\n\n" + cleaned).c_str());
 }
 
@@ -492,20 +537,41 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
         g_conversationTokens.erase(g_conversationTokens.begin());
     }
 
-    llama_batch batch = llama_batch_init(g_conversationTokens.size(), 0, 1);
-    for (size_t i = 0; i < g_conversationTokens.size(); i++) {
-        batch.token[i] = g_conversationTokens[i];
-        batch.pos[i] = i;
-        batch.n_seq_id[i] = 1;
-        batch.seq_id[i][0] = 0;
-        batch.logits[i] = (i == g_conversationTokens.size() - 1);
+    // 增量 decode：只处理新增的 tokens，避免 KV cache 位置冲突
+    size_t current_count = g_conversationTokens.size();
+    
+    // 如果历史被截断或重置，需要清除 KV cache 并重新处理
+    if (g_prev_token_count > current_count) {
+        llama_memory_clear(llama_get_memory(g_ctx), true);
+        g_prev_token_count = 0;
     }
-    batch.n_tokens = g_conversationTokens.size();
-    llama_decode(g_ctx, batch);
-    llama_batch_free(batch);
+    
+    // 只 decode 新增的 tokens
+    if (current_count > g_prev_token_count) {
+        size_t new_tokens_count = current_count - g_prev_token_count;
+        llama_batch batch = llama_batch_init(new_tokens_count, 0, 1);
+        for (size_t i = 0; i < new_tokens_count; i++) {
+            size_t idx = g_prev_token_count + i;
+            batch.token[i] = g_conversationTokens[idx];
+            batch.pos[i] = idx;  // 位置是全局位置
+            batch.n_seq_id[i] = 1;
+            batch.seq_id[i][0] = 0;
+            batch.logits[i] = (i == new_tokens_count - 1);  // 只有最后一个 token 需要 logits
+        }
+        batch.n_tokens = new_tokens_count;
+        llama_decode(g_ctx, batch);
+        llama_batch_free(batch);
+        
+        g_prev_token_count = current_count;
+        LOGI("nativeChat 增量decode %zu tokens, 当前历史长度: %zu", new_tokens_count, current_count);
+    }
 
     std::vector<llama_token> generated_tokens;
     llama_sampler_reset(g_sampler);
+    
+    // 打印 EOS token ID 便于调试
+    llama_token eos_token = llama_vocab_eos(vocab);
+    LOGI("nativeChat EOS token ID: %d", eos_token);
 
     for (int i = 0; i < g_max_tokens; i++) {
         if ((int)g_conversationTokens.size() + i >= llama_n_ctx(g_ctx)) break;
@@ -524,33 +590,40 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
         
         llama_sampler_accept(g_sampler, token);
 
-        if (llama_vocab_is_eog(vocab, token)) {
+        // 只检测精确的 EOS token，避免 is_eog 误判
+        if (token == eos_token) {
             LOGI("nativeChat 遇到结束标记 EOS (token: %d)，停止生成", token);
             break;
         }
 
         generated_tokens.push_back(token);
 
-        // 构建当前文本用于反提示检测
-        std::string partial_text;
-        char buffer[256];
-        for (size_t j = 0; j < generated_tokens.size(); j++) {
-            int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
-            if (n > 0) partial_text.append(buffer, n);
+        // 增量构建文本（O(1)而非O(n²)）
+        static std::string cached_chat_text;
+        if (generated_tokens.size() == 1) {
+            cached_chat_text.clear();
         }
+        char buffer[256];
+        int32_t n = llama_token_to_piece(vocab, token, buffer, sizeof(buffer), 0, true);
+        if (n > 0) {
+            cached_chat_text.append(buffer, n);
+        }
+        const std::string& partial_text = cached_chat_text;
 
         // 检测反提示（如 USER:），如果模型开始生成用户消息格式，则停止
         if (containsAntiprompt(partial_text)) {
             LOGI("nativeChat 检测到反提示，停止生成并截断");
             // 截断反提示部分
-            size_t pos = partial_text.find("USER:");
-            if (pos == std::string::npos) pos = partial_text.find("User:");
-            if (pos == std::string::npos) pos = partial_text.find("user:");
+            std::string truncated = partial_text;
+            size_t pos = truncated.find("USER:");
+            if (pos == std::string::npos) pos = truncated.find("User:");
+            if (pos == std::string::npos) pos = truncated.find("user:");
             if (pos != std::string::npos) {
-                partial_text = partial_text.substr(0, pos);
+                truncated = truncated.substr(0, pos);
             }
             // 回调截断后的文本并退出循环
-            std::string cleaned_text = cleanUTF8String(partial_text);
+            std::string cleaned_text = cleanUTF8String(truncated);
+            cleaned_text = removeSpecialTokens(cleaned_text);
             streamingCallback(cleaned_text);
             break;
         }
@@ -558,7 +631,8 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
         // 每3个token回调一次
         if (generated_tokens.size() % 3 == 0) {
             // 清理 UTF-8 字符，避免 JNI 崩溃
-            std::string cleaned_text = cleanUTF8String(partial_text);
+            std::string cleaned_text = cleanUTF8String(extractAssistantContent(partial_text));
+            cleaned_text = removeSpecialTokens(cleaned_text);
             streamingCallback(cleaned_text);
         }
 
@@ -575,34 +649,38 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
 
     LOGI("nativeChat生成循环完成，生成了 %zu 个 tokens", generated_tokens.size());
 
-    // 最终回调：确保显示完整的生成文本
+    // 最终回调：确保显示完整的生成文本（直接使用已缓存的文本）
     if (!generated_tokens.empty()) {
         LOGI("nativeChat执行最终回调，tokens数量: %zu", generated_tokens.size());
-        std::string partial_text;
+        static std::string cached_chat_final;
+        cached_chat_final.clear();
         char buffer[256];
         for (size_t j = 0; j < generated_tokens.size(); j++) {
             int32_t n = llama_token_to_piece(vocab, generated_tokens[j], buffer, sizeof(buffer), 0, true);
-            if (n > 0) partial_text.append(buffer, n);
+            if (n > 0) cached_chat_final.append(buffer, n);
         }
         // 检测并截断反提示
-        if (containsAntiprompt(partial_text)) {
-            size_t pos = partial_text.find("USER:");
-            if (pos == std::string::npos) pos = partial_text.find("User:");
-            if (pos == std::string::npos) pos = partial_text.find("user:");
+        if (containsAntiprompt(cached_chat_final)) {
+            size_t pos = cached_chat_final.find("USER:");
+            if (pos == std::string::npos) pos = cached_chat_final.find("User:");
+            if (pos == std::string::npos) pos = cached_chat_final.find("user:");
             if (pos != std::string::npos) {
-                partial_text = partial_text.substr(0, pos);
+                cached_chat_final = cached_chat_final.substr(0, pos);
                 LOGI("nativeChat最终回调截断反提示，保留 %zu 字符", pos);
             }
         }
         // 清理 UTF-8 字符，避免 JNI 崩溃
-        std::string cleaned_text = cleanUTF8String(partial_text);
+        std::string cleaned_text = cleanUTF8String(cached_chat_final);
+        cleaned_text = removeSpecialTokens(cleaned_text);
         LOGI("nativeChat最终回调文本长度: %zu", cleaned_text.length());
         streamingCallback(cleaned_text);
     } else {
         LOGI("nativeChat没有生成任何token，跳过最终回调");
     }
 
-    std::string generated_text;
+    // 构建 generated_text
+    static std::string generated_text;
+    generated_text.clear();
     char buffer[256];
     for (size_t i = 0; i < generated_tokens.size(); i++) {
         int32_t n = llama_token_to_piece(vocab, generated_tokens[i], buffer, sizeof(buffer), 0, true);
@@ -617,6 +695,18 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
             generated_text = generated_text.substr(0, pos);
             LOGI("nativeChat返回文本截断反提示，保留 %zu 字符", pos);
         }
+    }
+    
+    // 截取 ASSISTANT: 后面的内容（去除对话格式前缀）
+    size_t assistant_pos = generated_text.find("ASSISTANT:");
+    if (assistant_pos != std::string::npos) {
+        generated_text = generated_text.substr(assistant_pos + 10);  // "ASSISTANT:" 长度为 10
+        // 去除开头的空格
+        size_t first_non_space = generated_text.find_first_not_of(" \t\n\r");
+        if (first_non_space != std::string::npos) {
+            generated_text = generated_text.substr(first_non_space);
+        }
+        LOGI("nativeChat截取ASSISTANT后的内容，长度: %zu", generated_text.length());
     }
 
     g_conversationTokens.insert(g_conversationTokens.end(), generated_tokens.begin(), generated_tokens.end());
@@ -633,14 +723,23 @@ Java_com_erlab_actuaware_MainActivity_nativeChat(
         LOGI("nativeChat 已在回答末尾添加换行符");
     }
 
+    // 更新增量decode追踪位置
+    g_prev_token_count = g_conversationTokens.size();
+    LOGI("nativeChat 更新g_prev_token_count为: %zu", g_prev_token_count);
+
     std::string cleaned = cleanUTF8String(generated_text);
+    cleaned = removeSpecialTokens(cleaned);
     return env->NewStringUTF(cleaned.c_str());
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_erlab_actuaware_MainActivity_nativeResetChatHistory(JNIEnv *, jobject) {
     g_conversationTokens.clear();
-    LOGI("对话历史已重置");
+    g_prev_token_count = 0;  // 重置增量decode追踪
+    if (g_ctx) {
+        llama_memory_clear(llama_get_memory(g_ctx), true);
+    }
+    LOGI("对话历史和KV cache已重置");
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -661,6 +760,12 @@ Java_com_erlab_actuaware_MainActivity_nativeRestoreContext(
 
     // 清空当前对话历史
     g_conversationTokens.clear();
+    
+    // 清除 KV cache
+    llama_memory_clear(llama_get_memory(g_ctx), true);
+    
+    // 重置增量 decode 追踪
+    g_prev_token_count = 0;
 
     // 解析历史记录，每行一条
     std::istringstream iss(historyText);

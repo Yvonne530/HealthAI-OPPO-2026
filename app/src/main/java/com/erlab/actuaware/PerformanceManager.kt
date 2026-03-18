@@ -119,12 +119,13 @@ class PerformanceManager(context: Context) {
     
     /**
      * 获取推荐的图像最大尺寸
+     * 注：Qwen2.5-VL 0.8B原生支持448×448，过大图片会被模型内部下采样
      */
     fun getRecommendedImageMaxDimension(): Int {
         return when (performanceLevel) {
-            PERFORMANCE_HIGH -> 1280
-            PERFORMANCE_MEDIUM -> 1024
-            else -> 800
+            PERFORMANCE_HIGH -> 512
+            PERFORMANCE_MEDIUM -> 448
+            else -> 384
         }
     }
     
