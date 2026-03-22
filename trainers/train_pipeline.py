@@ -303,10 +303,12 @@ class RehabGuardianTrainer:
         ds_tr = E2EDataset(train_samples, split="train",
                            num_vis=cfg["stgcn"]["num_frames"],
                            future_k=future_k, normalizer=norm,
-                           augmentor=PoseAugmentor(enabled=True))
+                           augmentor=PoseAugmentor(enabled=True),
+                           pre_split=True)
         ds_va = E2EDataset(val_samples,   split="val",
                            num_vis=cfg["stgcn"]["num_frames"],
-                           future_k=future_k, normalizer=norm)
+                           future_k=future_k, normalizer=norm,
+                           pre_split=True)
 
         bs = tcfg["batch_size"]
         # Bug Fix #2: 单一 DataLoader，不再有三个 loader 的 zip 问题

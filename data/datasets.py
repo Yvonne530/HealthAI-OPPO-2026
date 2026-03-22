@@ -137,13 +137,18 @@ class E2EDataset(Dataset):
         augmentor:   Optional[PoseAugmentor] = None,
         train_ratio: float = 0.70,
         val_ratio:   float = 0.15,
+        pre_split:   bool  = False,
     ):
         self.num_vis  = num_vis
         self.future_k = future_k
         self.norm     = normalizer
         self.augment  = augmentor if augmentor is not None else PoseAugmentor(enabled=(split=="train"))
 
-        raw = _split_by_sequence(samples, train_ratio, val_ratio, split)
+        # main / trainer 已按序列划分 train/val 时，samples 即为该 split 全量帧，不可再次 _split_by_sequence
+        if pre_split:
+            raw = samples
+        else:
+            raw = _split_by_sequence(samples, train_ratio, val_ratio, split)
         self._samples = raw
 
         # 滑窗索引：需要 num_vis 帧历史 + future_k 帧未来
@@ -239,11 +244,15 @@ class FNODataset(Dataset):
     """单独训练 FNO 时使用（无 pose 输入）"""
 
     def __init__(self, samples, split="train", seq_len=20, future_k=FUTURE_K,
-                 normalizer=None, train_ratio=0.70, val_ratio=0.15):
+                 normalizer=None, train_ratio=0.70, val_ratio=0.15,
+                 pre_split: bool = False):
         self.seq_len   = seq_len
         self.future_k  = future_k
         self.norm      = normalizer
-        raw = _split_by_sequence(samples, train_ratio, val_ratio, split)
+        if pre_split:
+            raw = samples
+        else:
+            raw = _split_by_sequence(samples, train_ratio, val_ratio, split)
         self._samples  = raw
         need = seq_len + future_k
         self.windows = [i for i in range(len(raw) - need)
