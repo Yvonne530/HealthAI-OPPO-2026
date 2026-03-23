@@ -1,10 +1,10 @@
+#!/usr/bin/env python3
 """
-main.py  (v3 - 修复 Bug 3/4/5 + 双数据源支持)
-修复的 Bug：
-  3. result 变量作用域（循环外访问保护）
-  4. FNO1d 缺少 future_k 参数
-  5. RiskMLP 缺少 seq_len / use_physio 参数
-  新增：支持 raw OpenSim (.sto) 数据源
+main.py  (v5 - 适配 7.8GB RAM + RTX 4070 Laptop)
+改动：
+  - 全量 get_all_samples() → HDF5 流式读取
+  - train 不再把样本堆内存，改用 HDF5Dataset
+  - 新增 --mode check：环境检查，不跑训练
 """
 import argparse
 import logging
@@ -29,107 +29,172 @@ def setup_logging(cfg: dict) -> None:
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler(os.path.join(log_dir, "run.log"), encoding="utf-8"),
+            logging.FileHandler(
+                os.path.join(log_dir, f"run_{time.strftime('%Y%m%d_%H%M%S')}.log"),
+                encoding="utf-8"
+            ),
         ],
     )
 
 
 def load_config(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 # =====================================================================
-# 数据预处理（支持 .b3d 和原始 OpenSim 双源）
+# 环境检查（--mode check）
 # =====================================================================
 
-def run_preprocess(cfg: dict) -> list:
-    """加载数据（自动检测 .b3d 或 原始 OpenSim 格式），运行教师打标"""
-    from utils.teacher_labeler import TeacherLabeler
-
-    b3d_root = cfg["data"]["raw_root"]
-    raw_root = cfg["data"].get("raw_opensim_root", "")
-
-    all_samples = []
-
-    # 1. 加载 .b3d 数据
-    if os.path.isdir(b3d_root):
-        from utils.b3d_loader import B3DLoader
-        loader = B3DLoader(b3d_root)
-        logger.info(f"[.b3d] 加载 {len(loader)} 个文件...")
-        all_samples.extend(loader.get_all_samples())
-    else:
-        logger.warning(f".b3d 目录不存在: {b3d_root}")
-
-    # 2. 加载原始 OpenSim 数据（若配置了 raw_opensim_root）
-    if raw_root and os.path.isdir(raw_root):
-        from utils.raw_data_loader import RawDataLoader
-        raw_loader = RawDataLoader(raw_root)
-        logger.info(f"[OpenSim] 加载 {len(raw_loader)} 个受试者...")
-        all_samples.extend(raw_loader.get_all_samples())
-    elif raw_root:
-        logger.warning(f"OpenSim 原始数据目录不存在: {raw_root}")
-
-    if not all_samples:
-        logger.warning("未找到真实数据，使用合成数据演示...")
-        all_samples = _make_synthetic_samples(n=600)
-
-    logger.info(f"总样本数: {len(all_samples)}")
-
-    # 教师打标（写回 risk_label）
-    labeler = TeacherLabeler()
-    labels, scores = labeler.label_sequence(all_samples)
-    dist = np.bincount(labels, minlength=3)
-    logger.info(f"风险标签分布: 低={dist[0]} 中={dist[1]} 高={dist[2]}")
-
-    return all_samples
-
-
-def _make_synthetic_samples(n: int = 600) -> list:
-    from utils.rg_sample import RGSample
-    rng = np.random.default_rng(42)
-    samples = []
-    seq_ids = [f"seq_{i//100}" for i in range(n)]
-    for i in range(n):
-        s = RGSample()
-        s.t = float(i % 100) / 60; s.sequence_id = seq_ids[i]; s.valid = True
-        s.joint_angles = rng.normal(0, 0.3, 23).astype(np.float32)
-        s.joint_vel    = rng.normal(0, 1.0, 23).astype(np.float32)
-        s.joint_acc    = rng.normal(0, 5.0, 23).astype(np.float32)
-        s.markers      = rng.normal(0, 0.5, (28, 3)).astype(np.float32)
-        s.grf_left     = np.abs(rng.normal(300, 100, 6)).astype(np.float32)
-        s.grf_right    = np.abs(rng.normal(300, 100, 6)).astype(np.float32)
-        s.com          = rng.normal(0, 1.0, 3).astype(np.float32)
-        s.grf_mask     = 1.0; s.physics_weight = 1.0
-        s.contact_left = True; s.contact_right = False
-        s.risk_label   = int(rng.integers(0, 3))
-        samples.append(s)
-    logger.info(f"合成数据: {n} 帧")
-    return samples
-
-
-# =====================================================================
-# 训练
-# =====================================================================
-
-def run_train(cfg: dict, samples: list) -> None:
+def run_check(cfg: dict) -> None:
+    """验证运行环境，打印硬件报告"""
     import torch
-    from models.stgcn          import STGCN
-    from models.fno            import FNO1d
-    from models.risk_model     import RiskMLP
+
+    print("\n" + "=" * 60)
+    print("RehabGuardian 环境检查")
+    print("=" * 60)
+
+    # GPU
+    cuda_ok = torch.cuda.is_available()
+    print(f"CUDA 可用:     {cuda_ok}")
+    if cuda_ok:
+        props = torch.cuda.get_device_properties(0)
+        vram  = props.total_memory / 1e9
+        print(f"GPU:           {props.name}")
+        print(f"VRAM:          {vram:.1f} GB")
+        if vram < 6:
+            print("⚠️  VRAM 不足 6GB，batch_size 请设为 8")
+        elif vram < 8:
+            print("✅  VRAM 充足，batch_size=16 稳定运行")
+
+    # RAM
+    try:
+        import psutil
+        ram_gb = psutil.virtual_memory().total / 1e9
+        ram_avail = psutil.virtual_memory().available / 1e9
+        print(f"RAM 总量:      {ram_gb:.1f} GB")
+        print(f"RAM 可用:      {ram_avail:.1f} GB")
+        if ram_gb < 8:
+            print("⚠️  WSL2 RAM 较少，已切换到 HDF5 流式模式（无需全量加载）")
+            print("   建议：在 C:\\Users\\Lenovo\\.wslconfig 中添加:")
+            print("   [wsl2]")
+            print("   memory=14GB")
+            print("   swap=8GB")
+    except ImportError:
+        pass
+
+    # 磁盘
+    h5_path = cfg["data"]["h5_path"]
+    h5_dir  = os.path.dirname(h5_path)
+    try:
+        import shutil
+        total, used, free = shutil.disk_usage(h5_dir if os.path.exists(h5_dir)
+                                              else os.path.dirname(h5_dir))
+        print(f"磁盘可用:      {free/1e9:.1f} GB  ({h5_dir})")
+        if free < 3e9:
+            print("⚠️  磁盘空间不足，HDF5 约需 2GB")
+    except Exception:
+        pass
+
+    # HDF5 文件
+    if os.path.exists(h5_path):
+        size_gb = os.path.getsize(h5_path) / 1e9
+        print(f"HDF5 文件:     ✅ 已存在 ({size_gb:.2f} GB)")
+    else:
+        print(f"HDF5 文件:     ❌ 不存在，请先运行: python preprocess.py")
+
+    # 关键包
+    for pkg in ["torch", "h5py", "nimblephysics", "scipy", "numpy"]:
+        try:
+            mod = __import__(pkg)
+            ver = getattr(mod, "__version__", "?")
+            print(f"{pkg:<18} {ver}")
+        except ImportError:
+            print(f"{pkg:<18} ❌ 未安装")
+
+    # nimblephysics 专项
+    try:
+        import nimblephysics as nimble
+        print("nimblephysics: ✅")
+    except Exception as e:
+        print(f"nimblephysics: ❌ {e}")
+
+    print("=" * 60)
+
+
+# =====================================================================
+# 训练（HDF5 版本）
+# =====================================================================
+
+def run_train(cfg: dict) -> None:
+    import torch
+    from torch.utils.data import DataLoader
+    from models.stgcn      import STGCN
+    from models.fno        import FNO1d
+    from models.risk_model import RiskMLP
+    from utils.normalizer  import Normalizer
+    from data.hdf5_dataset import HDF5RehabDataset, build_datasets
     from trainers.train_pipeline import RehabGuardianTrainer
-    from data.datasets import _split_by_sequence
+    from utils.reproducibility   import StructuredLogger, verify_dataset_version
 
-    train_samples = _split_by_sequence(samples, split="train",
-                                       train_ratio=cfg["data"]["train_ratio"],
-                                       val_ratio=cfg["data"]["val_ratio"])
-    val_samples   = _split_by_sequence(samples, split="val",
-                                       train_ratio=cfg["data"]["train_ratio"],
-                                       val_ratio=cfg["data"]["val_ratio"])
-    logger.info(f"训练集: {len(train_samples)} | 验证集: {len(val_samples)}")
+    h5_path   = cfg["data"]["h5_path"]
+    meta_path = cfg["data"]["meta_path"]
+    lock_path = os.path.join(cfg["data"]["processed_dir"], "data_version_lock.json")
 
-    # Bug Fix #4：FNO1d 补全 future_k 参数
+    # 验证 HDF5
+    if not os.path.exists(h5_path):
+        logger.error(f"HDF5 文件不存在: {h5_path}")
+        logger.error("请先运行: python preprocess.py")
+        sys.exit(1)
+
+    # 数据版本验证
+    verify_dataset_version(lock_path, [h5_path])
+
     future_k = cfg["fno"].get("future_k", 10)
+
+    # Normalizer（从 HDF5 计算，不需要全量加载）
+    norm = Normalizer()
+
+    # Dataset（HDF5 流式，fit 时采样 10 万帧）
+    logger.info("初始化 Dataset（流式读取，不全量加载）...")
+    ds_train = HDF5RehabDataset(
+        h5_path, meta_path, "train", norm,
+        seq_len=cfg["data"]["sequence_length"],
+        future_k=future_k,
+        vis_len=cfg["stgcn"]["num_frames"],
+        augment=True,
+    )   # norm 在此 fit
+    ds_val = HDF5RehabDataset(
+        h5_path, meta_path, "val", norm,
+        seq_len=cfg["data"]["sequence_length"],
+        future_k=future_k,
+        vis_len=cfg["stgcn"]["num_frames"],
+        augment=False,
+    )
+
+    # 保存归一化参数
+    os.makedirs(cfg["data"]["processed_dir"], exist_ok=True)
+    norm.save(os.path.join(cfg["data"]["processed_dir"], "norm_stats.npz"))
+
+    bs          = cfg["train"]["batch_size"]
+    n_workers   = cfg["train"].get("num_workers", 0)
+    pin_memory  = cfg["train"].get("pin_memory", True) and torch.cuda.is_available()
+
+    dl_train = DataLoader(
+        ds_train, batch_size=bs, shuffle=True,
+        num_workers=n_workers, pin_memory=pin_memory,
+        persistent_workers=(n_workers > 0), drop_last=True,
+    )
+    dl_val = DataLoader(
+        ds_val, batch_size=bs, shuffle=False,
+        num_workers=n_workers, pin_memory=pin_memory,
+        persistent_workers=(n_workers > 0),
+    )
+
+    logger.info(f"训练集: {len(ds_train):,} 窗口 | 验证集: {len(ds_val):,} 窗口")
+    logger.info(f"batch_size={bs} | num_workers={n_workers} | pin_memory={pin_memory}")
+
+    # 构建模型
     stgcn = STGCN(
         num_nodes       = cfg["stgcn"]["num_nodes"],
         in_channels     = cfg["stgcn"]["in_channels"],
@@ -141,33 +206,57 @@ def run_train(cfg: dict, samples: list) -> None:
     fno = FNO1d(
         input_dim  = cfg["fno"]["input_dim"],
         output_dim = cfg["fno"]["output_dim"],
-        future_k   = future_k,               # ✅ 修复：补全 future_k
+        future_k   = future_k,
         modes      = cfg["fno"]["modes"],
         width      = cfg["fno"]["width"],
         depth      = cfg["fno"]["depth"],
         seq_len    = cfg["fno"]["seq_len"],
     )
-    # Bug Fix #5：RiskMLP 补全 seq_len 和 use_physio
     risk = RiskMLP(
         input_dim   = cfg["risk"]["input_dim"],
         hidden_dim  = cfg["risk"]["hidden_dim"],
         num_classes = cfg["risk"]["num_classes"],
-        seq_len     = cfg["risk"].get("seq_len", 20),      # ✅ 修复
-        use_physio  = cfg["risk"].get("use_physio", True), # ✅ 修复
+        seq_len     = cfg["risk"].get("seq_len", 20),
+        use_physio  = cfg["risk"].get("use_physio", True),
     )
 
     logger.info(f"ST-GCN: {stgcn.count_params()/1e6:.2f}M 参数")
     logger.info(f"FNO:    {fno.count_params()/1e6:.3f}M 参数")
-    logger.info(f"Risk:   {risk.count_params()} 参数")
+    logger.info(f"Risk:   {risk.count_params():,} 参数")
     logger.info(f"FNO 初始时延: {fno.current_lag_ms:.1f}ms")
 
-    trainer = RehabGuardianTrainer(cfg)
-    history = trainer.train_all(stgcn, fno, risk, train_samples, val_samples)
+    # 结构化日志
+    slog = StructuredLogger(
+        os.path.join(cfg["train"]["log_dir"],
+                     f"run_{time.strftime('%Y%m%d_%H%M%S')}.json")
+    )
+    import json
+    with open(meta_path) as f:
+        meta = json.load(f)
+    slog.start(
+        config=cfg,
+        data_version={"fingerprint": meta.get("fingerprint",""), "frames": meta.get("total_frames",0)},
+        model_params={"stgcn": stgcn.count_params(), "fno": fno.count_params(), "risk": risk.count_params()},
+    )
 
-    final_val = history["val_loss"][-1] if history["val_loss"] else float("nan")
+    # 训练（使用已有 DataLoader，而非内部重建）
+    trainer = RehabGuardianTrainer(cfg)
+    history = trainer.train_with_loaders(
+        stgcn_model = stgcn,
+        fno_model   = fno,
+        risk_model  = risk,
+        dl_train    = dl_train,
+        dl_val      = dl_val,
+        slog        = slog,
+        future_k    = future_k,
+    )
+
+    slog.finish(early_stopped=history.get("early_stopped", False))
     final_lag = history["learned_lag_ms"][-1] if history["learned_lag_ms"] else 0
-    logger.info(f"训练完成 | 最终验证 loss={final_val:.4f} | "
-                f"学习时延={final_lag:.1f}ms")
+    logger.info(
+        f"训练完成 | best_val={min(history['val_loss']):.4f} | "
+        f"学习时延={final_lag:.1f}ms"
+    )
 
 
 # =====================================================================
@@ -178,37 +267,38 @@ def run_infer(cfg: dict) -> None:
     from inference.inference import RehabGuardianInference
     from inference.heytap_health_adapter import HeytapHealthAdapter
 
-    engine  = RehabGuardianInference(cfg, device="cpu")
+    device = "cuda" if __import__("torch").cuda.is_available() else "cpu"
+    engine  = RehabGuardianInference(cfg, device=device)
     adapter = HeytapHealthAdapter(mock=True)
 
-    hr    = adapter.get_heart_rate()
-    sleep = adapter.get_sleep_score()
-    engine.update_health_data(hr, sleep)
+    engine.update_health_data(adapter.get_heart_rate(), adapter.get_sleep_score())
 
-    # Bug Fix #3：result 变量初始化，避免循环0次时访问失败
     result = None
     latencies = []
-    for i in range(30):
+    for i in range(60):
         skeleton = np.random.randn(33, 3).astype(np.float32)
         result   = engine.run(skeleton, mode="pose")
         latencies.append(result["latency_ms"])
-        if i % 10 == 0:
+        if i % 20 == 0:
             logger.info(
                 f"帧{i:02d}: {result['risk_text']} "
                 f"{result['latency_ms']:.1f}ms "
-                f"conf={result.get('confidence',0):.2f}"
+                f"conf={result.get('confidence',0):.2f} "
+                f"state={result.get('risk_label','?')}"
             )
 
     if latencies:
-        logger.info(f"平均延迟: {np.mean(latencies):.2f}ms (目标 <15ms)")
+        logger.info(
+            f"延迟统计: mean={np.mean(latencies):.1f}ms "
+            f"p95={np.percentile(latencies,95):.1f}ms"
+        )
 
-    # Bug Fix #3：result 可能为 None 的保护
     if result is not None:
         adapter.write_risk_analysis(
-            start_time_ms = int(time.time() * 1000),
-            duration_ms   = int(30 / 60 * 1000),
-            risk_score    = result["risk_score"],
-            risk_level    = result["risk_label"],
+            start_time_ms=int(time.time() * 1000),
+            duration_ms=int(60 / 60 * 1000),
+            risk_score=result["risk_score"],
+            risk_level=result["risk_label"],
         )
 
 
@@ -226,9 +316,9 @@ def run_export(cfg: dict) -> None:
 # =====================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="RehabGuardian 10.0 v3")
+    parser = argparse.ArgumentParser(description="RehabGuardian 10.0")
     parser.add_argument("--mode",   default="train",
-                        choices=["train", "infer", "export", "preprocess"])
+                        choices=["preprocess", "train", "infer", "export", "check"])
     parser.add_argument("--config", default=os.path.join(ROOT, "configs/config.yaml"))
     args = parser.parse_args()
 
@@ -241,20 +331,21 @@ def main():
         torch.manual_seed(cfg["project"]["seed"])
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark     = False
     except ImportError:
         pass
 
     logger.info("=" * 60)
-    logger.info(f"RehabGuardian {cfg['project']['version']}")
-    logger.info(f"模式: {args.mode}")
+    logger.info(f"RehabGuardian {cfg['project']['version']}  模式: {args.mode}")
     logger.info("=" * 60)
 
-    if args.mode == "preprocess":
-        samples = run_preprocess(cfg)
-        logger.info(f"预处理完成，{len(samples)} 个样本")
+    if   args.mode == "check":
+        run_check(cfg)
+    elif args.mode == "preprocess":
+        logger.info("请直接运行: python preprocess.py")
+        logger.info("（支持更多参数，如 --skip_markers）")
     elif args.mode == "train":
-        samples = run_preprocess(cfg)
-        run_train(cfg, samples)
+        run_train(cfg)
     elif args.mode == "infer":
         run_infer(cfg)
     elif args.mode == "export":

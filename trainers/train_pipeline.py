@@ -196,7 +196,11 @@ def e2e_forward(
     sl_t  = batch.get("sleep_score", torch.full((B,1), 80.0)).to(device)
     logits, conf = risk_model(risk_input, hr_t, sl_t)
 
-    loss_risk = F.cross_entropy(logits, risk_label)
+    # 类别权重：缓解 LOW/MED/HIGH 不均衡（尤其是修复前 MED=0 的遗留问题）
+    with torch.no_grad():
+        counts = torch.bincount(risk_label.flatten().clamp(0,2), minlength=3).float() + 1.0
+        cw = (1.0 / counts); cw = cw / cw.sum() * 3.0
+    loss_risk = F.cross_entropy(logits, risk_label, weight=cw.to(logits.device))
     pred_lbl  = logits.argmax(-1)
     correct   = (pred_lbl == risk_label).float().unsqueeze(-1)
     loss_conf = F.binary_cross_entropy(conf, correct)
@@ -303,12 +307,10 @@ class RehabGuardianTrainer:
         ds_tr = E2EDataset(train_samples, split="train",
                            num_vis=cfg["stgcn"]["num_frames"],
                            future_k=future_k, normalizer=norm,
-                           augmentor=PoseAugmentor(enabled=True),
-                           pre_split=True)
+                           augmentor=PoseAugmentor(enabled=True))
         ds_va = E2EDataset(val_samples,   split="val",
                            num_vis=cfg["stgcn"]["num_frames"],
-                           future_k=future_k, normalizer=norm,
-                           pre_split=True)
+                           future_k=future_k, normalizer=norm)
 
         bs = tcfg["batch_size"]
         # Bug Fix #2: 单一 DataLoader，不再有三个 loader 的 zip 问题
@@ -473,6 +475,154 @@ class RehabGuardianTrainer:
         if os.path.exists(path):
             model.load_state_dict(torch.load(path, map_location=self.device))
         return model
+
+    def train_with_loaders(
+        self,
+        stgcn_model, fno_model, risk_model,
+        dl_train, dl_val,
+        slog=None, future_k: int = 10,
+    ) -> dict:
+        """HDF5 版本：接受外部 DataLoader，适配 7.8GB RAM 环境"""
+        cfg   = self.cfg
+        tcfg  = cfg["train"]
+        n_epochs   = tcfg["num_epochs"]
+        st_cfg     = cfg.get("stage_training", {})
+        stage1_end = int(n_epochs * st_cfg.get("stage1_ratio", 0.30))
+        stage2_end = int(n_epochs * st_cfg.get("stage2_ratio", 0.60))
+
+        lr, wd    = tcfg["learning_rate"], tcfg["weight_decay"]
+        warmup_ep = cfg.get("scheduled_sampling", {}).get("warmup_epochs", 5)
+
+        opt_s1, sc_s1 = _create_opt_and_sched(
+            stgcn_model.parameters(), lr, wd, n_epochs, warmup_ep)
+        opt_s2, sc_s2 = _create_opt_and_sched(
+            list(fno_model.parameters()) + list(risk_model.parameters()),
+            lr, wd, n_epochs, warmup_ep)
+        opt_s3, sc_s3 = _create_opt_and_sched(
+            list(stgcn_model.parameters()) +
+            list(fno_model.parameters()) +
+            list(risk_model.parameters()),
+            lr * 0.1, wd, n_epochs, warmup_ep)
+
+        w     = tcfg["loss_weights"]
+        early = EarlyStopping(patience=tcfg["patience"])
+        history = {"train_loss": [], "val_loss": [], "val_grf_mae": [],
+                   "val_risk_acc": [], "learned_lag_ms": [], "early_stopped": False}
+        best_val = float("inf")
+
+        stgcn_model.to(self.device)
+        fno_model.to(self.device)
+        risk_model.to(self.device)
+
+        for epoch in range(1, n_epochs + 1):
+            t0    = time.time()
+            stage = 1 if epoch <= stage1_end else (2 if epoch <= stage2_end else 3)
+            if   stage == 1: opt, sched = opt_s1, sc_s1
+            elif stage == 2: opt, sched = opt_s2, sc_s2
+            else:            opt, sched = opt_s3, sc_s3
+
+            for p in stgcn_model.parameters(): p.requires_grad_(stage in (1, 3))
+            for p in fno_model.parameters():   p.requires_grad_(stage in (2, 3))
+            for p in risk_model.parameters():  p.requires_grad_(stage in (2, 3))
+
+            sched_p = max(0.3, 1.0 - 0.7 * (epoch - 1) / max(n_epochs - 1, 1))
+
+            stgcn_model.train(); fno_model.train(); risk_model.train()
+            tr_loss = 0.0; n_steps = 0
+
+            for batch in dl_train:
+                opt.zero_grad()
+                batch_adapted = {k: batch[k] for k in
+                    ["pose_seq", "ja_gt", "markers_gt", "grf_future",
+                     "grf_mask", "risk_label", "physics_weight"]}
+                _, losses = e2e_forward(
+                    stgcn_model, fno_model, risk_model,
+                    batch_adapted, self.device,
+                    scheduled_p=sched_p, future_k=future_k,
+                )
+                if stage == 1:
+                    total = (w.get("joint_angles", 0.30) * losses["ja"]
+                           + w.get("marker",       0.10) * losses["mk"]
+                           + 0.05 * losses["sym"])
+                else:
+                    total = (w.get("joint_angles", 0.30) * losses["ja"]
+                           + w.get("marker",       0.10) * losses["mk"]
+                           + w.get("grf",          0.35) * losses["grf"]
+                           + w.get("risk",         0.20) * losses["risk"]
+                           + w.get("conf",         0.05) * losses["conf"]
+                           + 0.05 * losses["sym"]
+                           + 0.05 * losses["pinn"])
+                total.backward()
+                nn.utils.clip_grad_norm_(stgcn_model.parameters(), 1.0)
+                nn.utils.clip_grad_norm_(fno_model.parameters(),   1.0)
+                nn.utils.clip_grad_norm_(risk_model.parameters(),  1.0)
+                opt.step()
+                tr_loss += total.item(); n_steps += 1
+            tr_loss /= max(n_steps, 1)
+
+            stgcn_model.eval(); fno_model.eval(); risk_model.eval()
+            val_loss = 0.0; grf_mae = 0.0; risk_correct = 0; n_val_b = 0
+            with torch.no_grad():
+                for batch in dl_val:
+                    batch_adapted = {k: batch[k] for k in
+                        ["pose_seq", "ja_gt", "markers_gt", "grf_future",
+                         "grf_mask", "risk_label", "physics_weight"]}
+                    preds, losses = e2e_forward(
+                        stgcn_model, fno_model, risk_model,
+                        batch_adapted, self.device,
+                        scheduled_p=0.0, future_k=future_k,
+                    )
+                    v = (w.get("joint_angles", 0.30) * losses["ja"]
+                       + w.get("grf",          0.35) * losses["grf"]
+                       + w.get("risk",         0.20) * losses["risk"])
+                    val_loss += v.item()
+                    grf_mae  += (preds["pred_grf"] -
+                                 batch["grf_future"].to(self.device)).abs().mean().item()
+                    risk_correct += (preds["logits"].argmax(-1) ==
+                                     batch["risk_label"].to(self.device)).sum().item()
+                    n_val_b += 1
+
+            val_loss /= max(n_val_b, 1)
+            grf_mae  /= max(n_val_b, 1)
+            risk_acc  = risk_correct / max(n_val_b * dl_val.batch_size, 1)
+            lag_ms    = fno_model.current_lag_ms
+            elapsed   = time.time() - t0
+
+            history["train_loss"].append(tr_loss)
+            history["val_loss"].append(val_loss)
+            history["val_grf_mae"].append(grf_mae)
+            history["val_risk_acc"].append(risk_acc)
+            history["learned_lag_ms"].append(lag_ms)
+            if slog:
+                slog.log_epoch(tr_loss, val_loss, grf_mae, risk_acc, lag_ms)
+
+            logger.info(
+                f"Ep {epoch:03d}/{n_epochs} [S{stage}] | "
+                f"tr={tr_loss:.4f} val={val_loss:.4f} "
+                f"grf_mae={grf_mae:.4f} risk_acc={risk_acc:.3f} "
+                f"lag={lag_ms:.1f}ms | {elapsed:.1f}s"
+            )
+            sched.step()
+
+            if val_loss < best_val:
+                best_val = val_loss
+                for m, name in [(stgcn_model, "stgcn_best.pth"),
+                                (fno_model,   "fno_best.pth"),
+                                (risk_model,  "risk_best.pth")]:
+                    torch.save(m.state_dict(),
+                               os.path.join(cfg["train"]["checkpoint_dir"], name))
+                logger.info(f"  ✅ 最佳模型保存 (val={best_val:.4f})")
+
+            if early(val_loss):
+                history["early_stopped"] = True
+                break
+
+        np.savez(
+            os.path.join(cfg["train"]["log_dir"], "train_history.npz"),
+            **{k: np.array(v) for k, v in history.items() if isinstance(v, list)},
+        )
+        return history
+
 
 
 if __name__ == "__main__":
