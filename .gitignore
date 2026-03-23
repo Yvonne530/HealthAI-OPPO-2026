@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 模型文件
+*.pth
+*.pt
+*.ckpt
+*.bin
+
+# 数据文件
+*.npz
+*.pkl
+*.b3d
+data/*/
+!data/*.py
+!data/hdf5_dataset.py
+
+# 日志
+logs/
+*.log
+*.pid
+
+# 检查点
+checkpoints/
+
+# 缓存
+.cache/
+*.cache
+
+# 测试数据
+data/small_b3d/
+data/test_b3d/
+
+# 软链接（如果是数据）
+data/_pretrain_no_b3d
