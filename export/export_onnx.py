@@ -29,7 +29,7 @@ def export_stgcn(model, cfg: dict, out_dir: str) -> str:
         output_names = ["joint_angles"],
         dynamic_axes = {"visual_seq":   {0: "batch"},
                         "joint_angles": {0: "batch"}},
-        opset_version = 11,          # OPPO NPU 兼容性更好
+        opset_version = 12,          # 支持 einsum 操作（ST-GCN 使用）
         do_constant_folding = True,
     )
     size_mb = os.path.getsize(path) / 1e6
@@ -68,7 +68,7 @@ def export_fno(model, cfg: dict, out_dir: str) -> str:
         output_names = ["grf_seq"],          # (B, T, 12)
         dynamic_axes = {"bio_seq":  {0: "batch"},
                         "grf_seq":  {0: "batch"}},
-        opset_version = 11,
+        opset_version = 12,
         do_constant_folding = True,
     )
     size_mb = os.path.getsize(path) / 1e6
@@ -80,15 +80,33 @@ def export_risk(model, cfg: dict, out_dir: str) -> str:
     os.makedirs(out_dir, exist_ok=True)
     path  = os.path.join(out_dir, "risk.onnx")
     D     = cfg["risk"]["input_dim"]
-    dummy = torch.randn(1, D)
+    T     = cfg["risk"].get("seq_len", 20)
+    
+    # Risk 模型的实际输入包含生理特征（hr + sleep_score）
+    # 创建包装类，使得 ONNX 输入维度符合期望
+    class RiskWrapper(nn.Module):
+        def __init__(self, risk_model):
+            super().__init__()
+            self.risk_model = risk_model
+        
+        def forward(self, risk_feat):
+            # risk_feat: (B, T, 35)，手动添加默认生理特征
+            B, T, _ = risk_feat.shape
+            hr_default = torch.full((B, 1), 70.0, device=risk_feat.device)
+            sl_default = torch.full((B, 1), 80.0, device=risk_feat.device)
+            logits, conf = self.risk_model(risk_feat, hr_default, sl_default)
+            return logits
+    
+    wrapper = RiskWrapper(model).eval()
+    dummy = torch.randn(1, T, D)
 
     torch.onnx.export(
-        model, dummy, path,
+        wrapper, dummy, path,
         input_names  = ["risk_feat"],
         output_names = ["logits"],
         dynamic_axes = {"risk_feat": {0: "batch"},
                         "logits":    {0: "batch"}},
-        opset_version = 11,
+        opset_version = 12,
         do_constant_folding = True,
     )
     size_mb = os.path.getsize(path) / 1e6
@@ -159,7 +177,8 @@ def export_all(cfg: dict) -> None:
     if os.path.exists(ck):
         risk.load_state_dict(torch.load(ck, map_location=device))
     p3 = export_risk(risk, cfg, out_dir)
-    verify_onnx(p3, torch.randn(1, cfg["risk"]["input_dim"]))
+    T = cfg["risk"].get("seq_len", 20)
+    verify_onnx(p3, torch.randn(1, T, cfg["risk"]["input_dim"]))
 
     logger.info(f"✅ 所有模型已导出到 {out_dir}")
 
