@@ -1,0 +1,118 @@
+project:
+  name: "RehabGuardian"
+  version: "10.0"
+  seed: 42
+
+data:
+  raw_root:      "/mnt/d/Camargo2021_Formatted_No_Arm/"
+  processed_dir: "/mnt/d/Camargo2021_Formatted_No_Arm/processed/"
+  h5_path:       "/mnt/d/Camargo2021_Formatted_No_Arm/processed/dataset.h5"
+  meta_path:     "/mnt/d/Camargo2021_Formatted_No_Arm/processed/metadata.json"
+  original_fps:  200
+  target_fps:    60
+  sequence_length: 20
+  future_k:      10
+  vis_len:        5
+  train_ratio:   0.70
+  val_ratio:     0.15
+  test_ratio:    0.15
+
+stgcn:
+  num_nodes:       33
+  in_channels:      3
+  num_frames:       5
+  hidden_channels: [64, 128, 256]
+  output_dim:      23
+  output_dim_aux:  84
+  dropout:         0.10
+
+fno:
+  input_dim:  72
+  output_dim: 12
+  future_k:   10
+  modes:      12
+  width:      64
+  depth:       4
+  seq_len:    20
+
+risk:
+  input_dim:        35
+  input_dim_physio: 37
+  hidden_dim:       64
+  num_classes:       3
+  seq_len:          20
+  use_physio:       true
+  knee_l_idx:        6
+  knee_r_idx:       13
+  knee_overext_rad: -0.0873
+  knee_max_rad:      2.094
+  knee_asymm_rad:    0.349
+  grf_bw_ratio:      2.5
+  body_weight_kg:   70.0
+  temporal_window:  10
+
+train:
+  device: "cuda"
+  batch_size: 24            # RTX 4070 Laptop 8.6GB 够用
+
+  # ★ 关键修复：WSL2 + h5py fork 不兼容，必须为 0
+  num_workers: 0            # ← 原来是4，这是卡死的根本原因
+  pin_memory:  true
+  prefetch_factor: 2        # num_workers=0 时无效，但保留
+
+  # ★ Epoch 子集采样（避免 1.7M 窗口跑完要几小时）
+  # epoch_subset_ratio: 1.0 = 全量（默认）
+  # epoch_subset_ratio: 0.1 = 每 epoch 随机抽 10%（~171K 窗口，约 20min/epoch）
+  epoch_subset_ratio: 0.10   # ← 训练稳定后可改为 0.3 或 1.0
+
+  num_epochs:    100
+  learning_rate: 0.001
+  weight_decay:  0.0001
+  patience:      15
+  checkpoint_dir: "./checkpoints/"
+  log_dir:        "./logs/"
+
+  loss_weights:
+    joint_angles: 0.30
+    marker:       0.10
+    grf:          0.35
+    risk:         0.20
+    conf:         0.05
+
+stage_training:
+  stage1_ratio: 0.30
+  stage2_ratio: 0.60
+  stage3_ratio: 1.00
+  stage3_lr_scale: 0.10
+
+scheduled_sampling:
+  start_p:       1.0
+  end_p:         0.3
+  warmup_epochs: 10
+
+temporal_lag:
+  init_lag_frames:  3
+  max_lag_frames:  12
+
+inference:
+  stgcn_ckpt: "./checkpoints/stgcn_best.pth"
+  fno_ckpt:   "./checkpoints/fno_best.pth"
+  risk_ckpt:  "./checkpoints/risk_best.pth"
+  norm_stats: "/mnt/d/Camargo2021_Formatted_No_Arm/processed/norm_stats.npz"
+  ood_stats:  "/mnt/d/Camargo2021_Formatted_No_Arm/processed/ood_stats.npz"
+  pose_buffer_size:  5
+  bio_buffer_size:  20
+  smooth_window:     5
+
+export:
+  onnx_dir: "./export/onnx/"
+  mnn_dir:  "./export/mnn/"
+
+oppo_health:
+  enabled: true
+  threshold_adjust_range: 0.2
+
+data_version:
+  b3d_hash: ""
+  raw_hash: ""
+  created:  ""

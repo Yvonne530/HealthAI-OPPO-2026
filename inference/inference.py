@@ -121,7 +121,7 @@ class RehabGuardianInference:
                              (self._fno,   icfg["fno_ckpt"]),
                              (self._risk_model, icfg["risk_ckpt"])]:
             if os.path.exists(ckpt):
-                model.load_state_dict(torch.load(ckpt, map_location=self.device))
+                model.load_state_dict(torch.load(ckpt, map_location=self.device, weights_only=True))
 
         self._mp_pose = None
         # 风险状态机（替代简单平滑）
