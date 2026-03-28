@@ -129,7 +129,9 @@ class SpatialGraphConv(nn.Module):
 
     def forward(self, x):
         B, T, N, C = x.shape
-        x_agg = torch.einsum("nm,btmc->btnc", self.A, x)
+        x_reshaped = x.reshape(B * T, N, C)
+        out_reshaped = torch.matmul(self.A, x_reshaped)
+        x_agg = out_reshaped.view(B, T, N, C)
         out   = self.fc(x_agg.reshape(B*T*N, C))
         return F.relu(self.bn(out)).reshape(B, T, N, -1)
 

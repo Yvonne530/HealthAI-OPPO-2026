@@ -1,0 +1,3 @@
+./MNN/build_mnnconvert/output.txt
+./MNN/build_mnnconvert//output/risk_confidence.txt
+./MNN/build_mnnconvert//output/risk_logits.txt

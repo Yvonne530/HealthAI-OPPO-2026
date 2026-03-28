@@ -11,8 +11,7 @@ models/risk_model.py  (v2 - 时序 + 置信度头 + 生理融合)
   control and valgus loading of the knee predict anterior cruciate
   ligament injury risk in female athletes." Am J Sports Med.
   Myer GD et al. 2010. "The influence of age on the effectiveness of
-  neuromuscular training to reduce anterior cruciate ligament injury in
-  female athletes." Am J Sports Med.
+  neuromuscular training to reduce anterior cruciate ligament injury in female athletes." Am J Sports Med.
 """
 import logging
 from collections import deque
@@ -67,6 +66,7 @@ class RiskMLP(nn.Module):
     时序风险分类器 v2
 
     输入:  (B, T, 35) 或 (B, T, 37)（含生理数据）
+          或者二维 (B, 35/37)，会自动扩展成 T=1
     输出:  logits (B, 3)  +  confidence (B, 1)
 
     Loss:
@@ -105,7 +105,7 @@ class RiskMLP(nn.Module):
 
     def forward(
         self,
-        x: torch.Tensor,                          # (B, T, 35)
+        x: torch.Tensor,                          # (B, T, 35) 或 (B, 35)
         heart_rate:   Optional[torch.Tensor] = None,   # (B, 1) 或 (B,)
         sleep_score:  Optional[torch.Tensor] = None,   # (B, 1) 或 (B,)
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -114,6 +114,10 @@ class RiskMLP(nn.Module):
             logits:     (B, 3)
             confidence: (B, 1)
         """
+        # 如果输入是二维 (B, D)，加一个时间维度
+        if x.dim() == 2:
+            x = x.unsqueeze(1)  # (B, 1, D)
+
         B, T, D = x.shape
 
         # 拼接生理特征（沿所有时间步广播）
@@ -161,13 +165,7 @@ class SafetyHeartbeat:
     2. 时间累积（连续 N 帧 → 升级风险）
     3. 自适应阈值（心率+睡眠驱动）
     4. 输出 = max(模型等级, 规则等级)
-
-    References:
-      - Hewett TE et al. 2005 (GRF/BW threshold)
-      - Myer GD et al. 2010 (knee valgus, asymmetry)
-      - Winter DA. "Biomechanics" Ch.3 (GRF normalization)
     """
-
     KNEE_L = 6;  KNEE_R  = 13
     HIP_L  = 3;  HIP_R   = 10
     KNEE_MIN_RAD   = -0.0873   # -5° 过伸
@@ -177,15 +175,9 @@ class SafetyHeartbeat:
 
     def __init__(self, body_weight_kg: float = 70.0):
         self.bw_n = body_weight_kg * 9.81
-
-        # 生理状态
-        self._hr:    float = 70.0
+        self._hr: float = 70.0
         self._sleep: float = 80.0
-
-        # 时间累积队列
         self._rule_hist: deque = deque(maxlen=self.TEMPORAL_WINDOW)
-
-    # ------ OPPO Health SDK 数据更新 ------
 
     def update_heart_rate(self, hr: float) -> None:
         self._hr = float(np.clip(hr, 40, 200))
@@ -193,64 +185,45 @@ class SafetyHeartbeat:
     def update_sleep_score(self, score: float) -> None:
         self._sleep = float(np.clip(score, 0, 100))
 
-    # ------ 自适应阈值 ------
-
     def _grf_threshold_bw(self) -> float:
-        """
-        GRF 风险阈值（以体重倍数计）：
-          base=1.5BW，心率高(疲劳)→降低，睡眠差→降低
-        """
         base = 1.5
-        # 心率因子：HR>80 开始降低阈值，每 +10bpm 降 5%
         hr_factor    = 1.0 - 0.05 * max(0, (self._hr - 80) / 10)
-        # 睡眠因子：睡眠<70分开始降低阈值
         sleep_factor = 0.8 + 0.2 * (self._sleep / 100)
         return base * float(np.clip(hr_factor * sleep_factor, 0.6, 1.3))
 
     def _grf_med_threshold_bw(self) -> float:
         return self._grf_threshold_bw() * 0.7
 
-    # ------ 规则引擎 ------
-
-    def _eval_rules(
-        self,
-        joint_angles: np.ndarray,   # (23,) 弧度，原始单位
-        grf:          np.ndarray,   # (12,) 牛顿，原始单位
-    ) -> Tuple[int, float, list]:
-        """
-        评估所有规则，返回 (rule_label, rule_conf, triggered_rules)
-        """
+    def _eval_rules(self, joint_angles: np.ndarray, grf: np.ndarray) -> Tuple[int, float, list]:
         ja  = joint_angles
         grf_z = abs(grf[2]) + abs(grf[8]) if len(grf) >= 9 else abs(grf[2])
-        grf_bw = grf_z / self.bw_n   # 归一化为体重倍数
-
+        grf_bw = grf_z / self.bw_n
         thr_high = self._grf_threshold_bw()
         thr_med  = self._grf_med_threshold_bw()
-
         rule_label  = 0
         rule_conf   = 0.5
         triggered   = []
 
-        # 规则1：膝关节过伸（参考 Hewett 2005 Fig.3）
+        # 膝关节过伸
         if ja[self.KNEE_L] < self.KNEE_MIN_RAD or ja[self.KNEE_R] < self.KNEE_MIN_RAD:
             rule_label = max(rule_label, 2)
             rule_conf  = 0.95
             triggered.append("knee_overextension")
 
-        # 规则2：膝关节角度过大
+        # 膝关节过大
         if ja[self.KNEE_L] > self.KNEE_MAX_RAD or ja[self.KNEE_R] > self.KNEE_MAX_RAD:
             rule_label = max(rule_label, 2)
             rule_conf  = 0.85
             triggered.append("knee_excessive_flexion")
 
-        # 规则3：左右膝不对称（膝内扣风险）
+        # 左右膝不对称
         asymm = abs(ja[self.KNEE_L] - ja[self.KNEE_R])
         if asymm > self.KNEE_ASYMM_RAD:
             rule_label = max(rule_label, 1)
             rule_conf  = max(rule_conf, 0.7)
             triggered.append(f"knee_asymmetry_{np.degrees(asymm):.1f}deg")
 
-        # 规则4：GRF 峰值（归一化为体重倍数）
+        # GRF 峰值
         if grf_bw > thr_high:
             rule_label = max(rule_label, 2)
             rule_conf  = max(rule_conf, 0.90)
@@ -260,7 +233,7 @@ class SafetyHeartbeat:
             rule_conf  = max(rule_conf, 0.65)
             triggered.append(f"med_grf_{grf_bw:.2f}BW")
 
-        # 规则5：组合规则 - 膝内扣 + 高心率 + 高GRF → 升级
+        # 组合规则
         if asymm > self.KNEE_ASYMM_RAD and grf_bw > thr_med and self._hr > 90:
             rule_label = max(rule_label, 2)
             rule_conf  = max(rule_conf, 0.88)
@@ -268,24 +241,7 @@ class SafetyHeartbeat:
 
         return rule_label, rule_conf, triggered
 
-    def validate(
-        self,
-        joint_angles:  np.ndarray,
-        grf:           np.ndarray,
-        model_label:   int,
-        model_conf:    float,
-    ) -> Tuple[int, float, bool]:
-        """
-        三重校验 + 时间累积：
-          1. 规则引擎评估当前帧
-          2. 时间累积：连续 N/2 帧触发 → 升级
-          3. 最终 = max(模型, 规则)
-
-        Returns:
-            final_label: int
-            final_conf:  float
-            overridden:  bool
-        """
+    def validate(self, joint_angles: np.ndarray, grf: np.ndarray, model_label: int, model_conf: float) -> Tuple[int, float, bool]:
         if isinstance(joint_angles, torch.Tensor):
             joint_angles = joint_angles.cpu().numpy()
         if isinstance(grf, torch.Tensor):
@@ -294,7 +250,7 @@ class SafetyHeartbeat:
         rule_label, rule_conf, triggered = self._eval_rules(joint_angles, grf)
         self._rule_hist.append(rule_label)
 
-        # 时间累积：若最近 TEMPORAL_WINDOW/2 帧中规则 >= 1，升级
+        # 时间累积
         hist = list(self._rule_hist)
         if len(hist) >= self.TEMPORAL_WINDOW // 2:
             recent = hist[-self.TEMPORAL_WINDOW//2:]
@@ -312,7 +268,7 @@ class SafetyHeartbeat:
 
 
 if __name__ == "__main__":
-    import torch, numpy as np
+    import math
 
     # RiskMLP v2 测试
     model = RiskMLP(seq_len=20)
@@ -341,7 +297,6 @@ if __name__ == "__main__":
     safety.update_sleep_score(55)
     print(f"自适应阈值（高心率+差睡眠）: {safety._grf_threshold_bw():.2f}×BW")
 
-    import math
     ja_overext = np.zeros(23, np.float32)
     ja_overext[6] = math.radians(-8)
     grf_test   = np.zeros(12, np.float32); grf_test[2] = 600

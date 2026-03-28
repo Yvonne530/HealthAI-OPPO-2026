@@ -6,6 +6,7 @@ Channel-wise z-score 归一化 + 空间去漂移
 """
 import logging
 import os
+import json
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -118,12 +119,22 @@ class Normalizer:
 
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        np.savez(path, **self.stats)
+        if path.lower().endswith(".json"):
+            payload = {k: np.asarray(v).tolist() for k, v in self.stats.items()}
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+        else:
+            np.savez(path, **self.stats)
         logger.info(f"归一化参数保存到 {path}")
 
     def load(self, path: str) -> "Normalizer":
-        data = np.load(path)
-        self.stats = {k: data[k] for k in data.files}
+        if path.lower().endswith(".json"):
+            with open(path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            self.stats = {k: np.asarray(v, dtype=np.float32) for k, v in raw.items()}
+        else:
+            data = np.load(path)
+            self.stats = {k: data[k] for k in data.files}
         self._fitted = True
         logger.info(f"归一化参数从 {path} 加载")
         return self
