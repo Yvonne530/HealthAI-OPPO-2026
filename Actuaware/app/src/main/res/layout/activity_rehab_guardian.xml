@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_rehab_guardian.xml
+     Design: 阳光奶油橘色 · 软萌Q弹 · 长毛橘猫元素
+     Target: OPPO Reno15 Pro  1080×2354  Android 16 -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream_bg">
+
+    <!-- ══ Camera Preview (full-height background) ══ -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:scaleType="fillCenter" />
+
+    <!-- ══ Pose skeleton overlay ══ -->
+    <com.healthai.ankle.ui.PoseOverlayView
+        android:id="@+id/overlayView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ══ TOP BAR ══ -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_top_bar"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Cat mascot icon -->
+        <ImageView
+            android:id="@+id/ivCatMascot"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/ic_cat_mascot"
+            android:layout_marginEnd="10dp"
+            android:scaleType="fitCenter" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:text="RehabGuardian"
+                android:textSize="18sp"
+                android:textColor="@color/orange_primary"
+                android:fontFamily="@font/nunito_bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:text="踝关节康复守护猫 🐾"
+                android:textSize="11sp"
+                android:textColor="@color/orange_muted"
+                android:fontFamily="@font/nunito"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvFrameCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="帧: 0"
+            android:textSize="10sp"
+            android:textColor="@color/orange_muted"
+            android:fontFamily="@font/nunito" />
+    </LinearLayout>
+
+    <!-- ══ BOTTOM CARD ══ -->
+    <LinearLayout
+        android:id="@+id/bottomCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_bottom_card"
+        android:padding="18dp"
+        android:elevation="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Risk label row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvRiskLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🐱 等待检测…"
+                android:textSize="22sp"
+                android:fontFamily="@font/nunito_bold"
+                android:textColor="@color/orange_primary" />
+
+            <TextView
+                android:id="@+id/tvConfidence"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="置信度: -"
+                android:textSize="12sp"
+                android:textColor="@color/orange_muted"
+                android:fontFamily="@font/nunito" />
+        </LinearLayout>
+
+        <!-- Risk progress bar (cream track, orange fill) -->
+        <ProgressBar
+            android:id="@+id/viewRiskBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp"
+            android:progressDrawable="@drawable/risk_progress"
+            android:max="100"
+            android:progress="0" />
+
+        <!-- Risk score + motion score row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/tvRiskScore"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="风险概率: -"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="@font/nunito" />
+
+            <TextView
+                android:id="@+id/tvMotionScore"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="运动评分: -"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="@font/nunito"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <!-- Knee angles row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="10dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="@drawable/bg_knee_card"
+                android:padding="10dp">
+
+                <TextView
+                    android:text="左膝"
+                    android:textSize="10sp"
+                    android:textColor="@color/orange_muted"
+                    android:fontFamily="@font/nunito"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/tvKneeLeft"
+                    android:text="--°"
+                    android:textSize="24sp"
+                    android:textColor="@color/green_accent"
+                    android:fontFamily="@font/nunito_bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <View android:layout_width="8dp" android:layout_height="1dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="@drawable/bg_knee_card"
+                android:padding="10dp">
+
+                <TextView
+                    android:text="右膝"
+                    android:textSize="10sp"
+                    android:textColor="@color/orange_muted"
+                    android:fontFamily="@font/nunito"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/tvKneeRight"
+                    android:text="--°"
+                    android:textSize="24sp"
+                    android:textColor="@color/green_accent"
+                    android:fontFamily="@font/nunito_bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Hint banner -->
+        <TextView
+            android:id="@+id/tvHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_hint"
+            android:padding="10dp"
+            android:text=""
+            android:textSize="12sp"
+            android:textColor="@color/orange_dark"
+            android:fontFamily="@font/nunito"
+            android:visibility="invisible" />
+
+        <!-- Action buttons row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="14dp">
+
+            <Button
+                android:id="@+id/btnStartStop"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="▶ 开始"
+                android:textSize="15sp"
+                android:fontFamily="@font/nunito_bold"
+                android:background="@drawable/btn_orange_pill"
+                android:textColor="@color/white" />
+
+            <View android:layout_width="10dp" android:layout_height="1dp" />
+
+            <Button
+                android:id="@+id/btnReport"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="📄 报告"
+                android:textSize="15sp"
+                android:fontFamily="@font/nunito_bold"
+                android:background="@drawable/btn_cream_pill"
+                android:textColor="@color/orange_primary"
+                android:visibility="gone" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

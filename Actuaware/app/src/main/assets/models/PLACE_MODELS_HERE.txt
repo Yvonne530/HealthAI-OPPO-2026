@@ -1,0 +1,11 @@
+Place the following 6 MNN model files in this directory:
+
+  stgcn_phaseA.mnn
+  stgcn_phaseA.mnn.weight
+  fno_lstm_phaseA.mnn
+  fno_lstm_phaseA.mnn.weight
+  risk_phaseA.mnn
+  risk_phaseA.mnn.weight
+
+Source: export/mnn_phasea_android_opt/ in the Python project.
+Also place pose_landmarker_lite.task here for MediaPipe.

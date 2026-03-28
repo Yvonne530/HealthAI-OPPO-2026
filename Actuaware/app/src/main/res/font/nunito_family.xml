@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nunito font family - soft rounded, Q弹感强
+  Place the following TTF files in res/font/:
+    nunito.ttf          (Nunito Regular 400)
+    nunito_bold.ttf     (Nunito Bold 700)
+    nunito_semibold.ttf (Nunito SemiBold 600)
+
+  Download: https://fonts.google.com/specimen/Nunito
+  Or use the Android Studio "More fonts" downloader in the layout editor.
+-->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Regular -->
+    <font
+        android:font="@font/nunito"
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        app:font="@font/nunito"
+        app:fontStyle="normal"
+        app:fontWeight="400" />
+
+    <!-- SemiBold -->
+    <font
+        android:font="@font/nunito_semibold"
+        android:fontStyle="normal"
+        android:fontWeight="600"
+        app:font="@font/nunito_semibold"
+        app:fontStyle="normal"
+        app:fontWeight="600" />
+
+    <!-- Bold -->
+    <font
+        android:font="@font/nunito_bold"
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        app:font="@font/nunito_bold"
+        app:fontStyle="normal"
+        app:fontWeight="700" />
+
+</font-family>
