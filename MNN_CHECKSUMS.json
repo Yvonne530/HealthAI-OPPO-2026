@@ -1,0 +1,46 @@
+{
+  "build_date": "2026-03-28",
+  "mnn_version": "3.4.1",
+  "optimization_flags": [
+    "--fp16",
+    "--useOriginRNNImpl for FNO"
+  ],
+  "models": {
+    "fno_lstm_phaseA.mnn": {
+      "size_bytes": 1739632,
+      "size_mb": 1.6590423583984375,
+      "md5": "ff9ca7c86a45d5edefdca9d8945f6538",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fno_lstm_phaseA.mnn.weight": {
+      "size_bytes": 97248,
+      "size_mb": 0.092742919921875,
+      "md5": "e0260ae009b44a819459aaa2116f19ac",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "risk_phaseA.mnn": {
+      "size_bytes": 14888,
+      "size_mb": 0.01419830322265625,
+      "md5": "781bfce3977a3a8790fe8732749e780f",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "risk_phaseA.mnn.weight": {
+      "size_bytes": 85168,
+      "size_mb": 0.0812225341796875,
+      "md5": "b3bded3f831611b96efa62e3f8744a99",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stgcn_phaseA.mnn": {
+      "size_bytes": 56408,
+      "size_mb": 0.05379486083984375,
+      "md5": "72a0cd86d5e9bf85a6daeeeb86aee921",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stgcn_phaseA.mnn.weight": {
+      "size_bytes": 936184,
+      "size_mb": 0.8928146362304688,
+      "md5": "7514fc71579e9e1352be82011c97a466",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}
