@@ -1,89 +1,102 @@
-# RehabGuardian · 端侧 ACL 损伤风险实时监测系统
+# HealthAI · Mobile On-Device AI Portfolio
 
-> Real-time On-Device ACL Injury Risk Monitoring System
-> 第十九届全国大学生软件创新大赛（SWC2026）参赛项目 · OPPO 手机端侧 AI
+> Android · Edge AI · Multimodal AI · On-Device Inference
 
-单目 RGB 摄像头实时提取人体姿态，在手机端离线完成 **关节角度估计 → 地面反作用力（GRF）预测 → 三级 ACL 风险分类** 的完整推理链。零云端、零穿戴设备。
+A real-world development repository containing two mobile AI projects,
+preserving their original Git history and development process.
 
-## 系统架构
+**Developer:** Jianyi Jian (简健怡)  
+**GitHub:** [@YvonnePotter](https://github.com/Yvonne530)
 
-```
-Camera2 (60fps) ──► MediaPipe Pose (33 keypoints)
-                          │
-                          ▼
-              ┌───────────────────────┐
-              │ ST-GCN                │  (B,5,33,3) → joint_angles(23) + markers(28×3)
-              │ 关节分组编码+对称约束   │
-              └──────────┬────────────┘
-                         ▼
-              ┌───────────────────────┐
-              │ FNO (+Learnable Lag)  │  (B,20,72)  → GRF 未来10帧 (~167ms) ×12通道
-              │ FFT主路/LSTM端侧降级    │
-              └──────────┬────────────┘
-                         ▼
-              ┌───────────────────────┐
-              │ RiskMLP + FSM         │  (B,20,35)  → 3级风险 + 置信度 + 可解释原因
-              │ 迟滞/EWMA/心率动态阈值  │
-              └───────────────────────┘
-```
+---
 
-**核心创新**
-- **可学习时延对齐（Learnable Temporal Lag）**：GRF 是力响应信号，天然滞后于关节运动 20–100ms。用可微 sigmoid 参数化 lag 让模型自动学习视觉输入与 GRF 响应间的物理延迟，从"同步拟合"升级为"因果建模"
-- **FNO 端侧降级路径**：FFT 算子在移动端 NPU 兼容性差，导出时切换 LSTM-compatible 分支（`--useOriginRNNImpl`），保证全机型可用
-- **ST-GCN 结构化先验**：按 OpenSim gait2392 关节分组编码（左腿链/右腿链/骨盆/脊柱/颈），并施加左右镜像对称约束损失 L_sym
+## Projects
 
-## 数据集
+### 🏃 Project A — RehabGuardian · Real-Time On-Device ACL Injury Risk Monitoring
 
-| 项目 | 规格 |
+An Android app that estimates human pose from a single RGB camera and runs a
+complete on-device inference chain offline:
+**joint angle estimation → ground reaction force (GRF) prediction → 3-level ACL injury risk classification**.
+No cloud, no wearables.
+
+- **Stack:** PyTorch · ST-GCN · FNO (+ learnable temporal lag) · RiskMLP/FSM · ONNX · MNN · Kotlin · CameraX · MediaPipe
+- **Real-device benchmark** (OPPO Reno15 Pro, MNN 2.9.0, 1000 runs; scope =
+  three-model serial forward-pass latency, excluding camera capture and
+  MediaPipe pre-processing — not end-to-end app latency): **1.34 ms average**
+
+| | |
 |---|---|
-| 来源 | Camargo2021（AddBiomechanics 平台开放获取） |
-| 规模 | 20 名受试者（AB06–AB30）、120 个 .b3d trial |
-| 特征 | 23 维关节角度/角速度/角加速度、双脚 GRF 各 6 维（Fx,Fy,Fz,Mx,My,Mz）、质心 3 维 |
-| 标签 | 物理规则 TeacherLabeler 打标的三级风险标签（低/中/高） |
+| 📖 Project README | [PROJECT_A_REHABGUARDIAN.md](PROJECT_A_REHABGUARDIAN.md) |
+| 💻 Source / Branches | [`feat/st-gcn`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) (training) · [`ABtest`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) (MNN deployment) · [`android-app`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) / [`feat/android_app_two`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) (Android apps) |
+| 📊 Benchmark & reports | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) · [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
 
-## 端侧部署性能（实测）
+---
 
-**OPPO Reno15 Pro（Snapdragon 8 Gen 3，Android 16）· MNN 2.9.0 · 1000 次连续推理**
+### 🤖 Project B — ActuAware (动悟) · Offline Multimodal AI Assistant for Android
 
-| 模型 | 平均延迟 | P95 | 最大 | 精度 | 大小 |
-|---|---|---|---|---|---|
-| STGCN | 0.77 ms | 1.38 ms | 3.64 ms | FP32（vs PyTorch 误差 <1e-5） | 0.95 MB |
-| FNO (LSTM 路径) | 0.48 ms | 0.73 ms | 2.03 ms | FP16 | 1.75 MB |
-| Risk | 0.09 ms | 0.15 ms | 2.56 ms | FP16（误差 ~3e-5） | 0.10 MB |
-| **三模型串行** | **1.34 ms** | **2.26 ms** | 8.23 ms | 1000 次无 NaN/Inf | **2.80 MB** |
+A fully offline Android AI assistant powered by **llama.cpp**: streaming chat,
+image analysis with pose/skeleton detection, web-search RAG, conversation
+history management, and device-adaptive performance tuning.
 
-> 口径：三模型 forward 推理延迟（不含相机采集与 MediaPipe 前处理）。转换链路 `PyTorch (.pth) → ONNX (opset 11) → MNNConvert`。
-> App 层整体功能测试见 [开发.md](开发.md) / [测试.md](测试.md)（66/66 单元测试通过）。
+- **Stack:** llama.cpp (mtmd) · C++ / JNI · GGUF · OpenCL · ML Kit Pose Detection · CameraX · Markwon
+- An Android multimodal AI project developed collaboratively,
+  with its original development history preserved in the `Android-Debug` branch.
+  See the project documentation and Git history for implementation details.
 
-## 仓库导航（分支地图）
-
-| 分支 | 内容 |
+| | |
 |---|---|
-| [`feat/st-gcn`](../../tree/feat/st-gcn) | **训练管线（PyTorch）**：`models/stgcn.py` / `fno.py` / `risk_model.py`、`train_v2.py`、HDF5 数据集加载、预处理、ONNX 导出脚本、训练权重 checkpoints、[ONNX 导出一致性测试报告](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) |
-| [`ABtest`](../../tree/ABtest) | **MNN 端侧交付包**：模型延迟/精度 benchmark、Android 集成指南（`MNN_ANDROID_INTEGRATION_GUIDE.md`）、Kotlin 参考实现、文件校验和 |
-| [`Yvonne530-upload-1`](../../tree/Yvonne530-upload-1) | 项目技术研究报告（`Technical documentation.md`）：问题定义、相关工作、部署细节、验证结果 |
-| [`android-app`](../../tree/android-app) | Android Demo App v1：`MNNInferenceEngine.kt`、滑动窗口缓冲、风险状态机、CameraX + MediaPipe 实时渲染（assets 内置 .mnn 模型） |
-| [`feat/android_app_two`](../../tree/feat/android_app_two) | Android App v2（RehabGuardian UI）：JNI 直连 MNN C++ API、特征工程管道、可解释风险输出、GRF 预测曲线、最佳帧对比、PDF 报告、Room 会话持久化 |
-| `main` | 项目文档（开发文档 / 测试文档） |
+| 📖 Project README | [PROJECT_B_ACTUAWARE.md](PROJECT_B_ACTUAWARE.md) |
+| 💻 Source / Branch | [`Android-Debug`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/Android-Debug) |
 
-## 快速开始
+---
 
-### 训练（PC / Kaggle）
-```bash
-git checkout feat/st-gcn
-pip install -r requirements.txt   # torch, h5py, nimblephysics ...
-python preprocess.py              # .b3d → HDF5
-python train_v2.py                # 三模型联合训练
-python export/export_onnx.py      # ONNX 导出 + 一致性校验
+## Why are two projects in one repository?
+
+This repository began as a long-running mobile health-AI development workspace.
+The two projects evolved as separate codebases and are therefore preserved on
+separate branches while sharing the same repository history.
+
+This is not an accidental mix of projects — the branch structure is kept as-is
+to preserve the real, verifiable development process (103 commits,
+2026-01 → present).
+
+## Repository Navigation
+
+| Project | Main docs | Code | Documentation |
+|---|---|---|---|
+| RehabGuardian | `main` + feature branches | [`feat/st-gcn`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) · [`ABtest`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) · [`android-app`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) · [`feat/android_app_two`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) | [Project A README](PROJECT_A_REHABGUARDIAN.md) |
+| ActuAware | [`Android-Debug`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/Android-Debug) | [`Android-Debug`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/Android-Debug) | [Project B README](PROJECT_B_ACTUAWARE.md) |
+
+Additional development-process branches (data preparation, early experiments,
+design documents) are linked from each project README.
+
+## Development Timeline
+
+```
+2026-01   Early data / model experiments (seed datasets, Kaggle training, LoRA v0.1)
+2026-03   ST-GCN / FNO training pipeline → ONNX/MNN deployment →
+          Android applications (RehabGuardian v1/v2) ‖ ActuAware development
+2026+     Technical documentation and refinement
 ```
 
-### 端侧集成（Android）
-```bash
-git checkout android-app          # 或 feat/android_app_two
-# assets/ 内置 stgcn.mnn / fno_lstm.mnn / risk.mnn（合计 2.80MB）
-./gradlew assembleDebug
-```
+## Engineering Highlights
 
-## License
+- On-device AI inference with measured real-device latency budgets
+- Android native integration (CameraX, MediaPipe, JNI/C++)
+- Full deployment chain: PyTorch → ONNX → MNN, with per-layer accuracy checks
+- llama.cpp / C++ / JNI integration with GPU-acceleration exploration (Vulkan → OpenCL)
+- Real-device performance benchmarking with published methodology and checksums
+- Reproducible engineering workflow: data → training → export → integration → testing
 
-MIT
+## Developer
+
+**Jianyi Jian (简健怡)**  
+GitHub: [@YvonnePotter](https://github.com/Yvonne530)
+
+Early-career software engineer focused on:
+
+- Java / Spring Boot backend engineering
+- Android development
+- Edge AI
+- On-device multimodal AI
+- Model deployment and optimization
