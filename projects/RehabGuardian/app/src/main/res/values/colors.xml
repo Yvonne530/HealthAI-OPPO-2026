@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 阳光奶油橘色调色板 -->
+    <color name="orange_primary">#F97316</color>
+    <color name="orange_light">#FED7AA</color>
+    <color name="orange_muted">#C2410C</color>
+    <color name="orange_dark">#9A3412</color>
+    <color name="cream_bg">#FFF7ED</color>
+    <color name="cream_card">#FFF3E0</color>
+    <color name="cream_white">#FFFBF5</color>
+    <color name="green_accent">#16A34A</color>
+    <color name="yellow_warn">#D97706</color>
+    <color name="red_alert">#DC2626</color>
+    <color name="text_primary">#1C1917</color>
+    <color name="text_secondary">#78716C</color>
+    <color name="white">#FFFFFF</color>
+    <color name="cat_fur_orange">#FB923C</color>
+    <color name="cat_cream">#FFF3E0</color>
+    <color name="cat_eye_black">#0C0A09</color>
+</resources>
