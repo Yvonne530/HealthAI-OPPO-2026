@@ -20,9 +20,12 @@ complete on-device inference chain offline:
 No cloud, no wearables.
 
 - **Stack:** PyTorch · ST-GCN · FNO (+ learnable temporal lag) · RiskMLP/FSM · ONNX · MNN · Kotlin · CameraX · MediaPipe
-- **Real-device benchmark** (OPPO Reno15 Pro, MNN 2.9.0, 1000 runs; scope =
-  three-model serial forward-pass latency, excluding camera capture and
-  MediaPipe pre-processing — not end-to-end app latency): **1.34 ms average**
+- **Audited model benchmark (this repo, main branch)**: MNN 3.6.1 CPU 4-thread
+  (same backend/threading as the Android engine), 100 warm-up + 5,000 measured
+  iterations per component — full three-model pipeline **2.26 ms mean / P50 2.01 /
+  P95 3.72 / P99 5.00 ms**. Raw per-iteration CSVs, aggregate stats and tensor-contract
+  validation (3/3 PASS, zero NaN/Inf) are committed under
+  [projects/RehabGuardian/benchmarks/](projects/RehabGuardian/benchmarks/README.md).
 
 | | |
 |---|---|
@@ -30,7 +33,7 @@ No cloud, no wearables.
 | 📉 Benchmark audit trail | [benchmarks/](projects/RehabGuardian/benchmarks/README.md) - [report](projects/RehabGuardian/benchmarks/reports/BENCHMARK_REPORT.md) - [validation](projects/RehabGuardian/benchmarks/reports/VALIDATION_REPORT.md) - PC pipeline **2.26 ms mean / P95 3.72 / P99 5.00** (MNN CPU 4-thread, 100 warm-up + 5,000 runs, raw CSVs committed) |
 | 📖 Project README | [PROJECT_A_REHABGUARDIAN.md](PROJECT_A_REHABGUARDIAN.md) |
 | 💻 Source / Branches | [feat/st-gcn](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) (training) - [ABtest](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) (MNN deployment) - [android-app](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) / [feat/android_app_two](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) (Android apps) |
-| 📊 Legacy reports | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) - [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
+| 📊 Legacy reports (incl. historical on-device run: 1.34 ms avg on Reno15 Pro, 1000 forward passes, scope = three-model forward pass only | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) - [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
 
 ---
 
