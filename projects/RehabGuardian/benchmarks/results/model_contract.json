@@ -1,0 +1,95 @@
+{
+  "backend": "MNN 3.6.1 CPU 4-thread",
+  "checks": [
+    {
+      "model": "stgcn_phaseA.mnn",
+      "input_name": "visual_seq",
+      "input_shape": [
+        1,
+        5,
+        33,
+        3
+      ],
+      "output_shapes": {
+        "joint_angles": [
+          1,
+          23
+        ]
+      },
+      "shape_match": true,
+      "nan_inf_count": 0,
+      "deterministic_input_seed": 42,
+      "sample_output": {
+        "joint_angles": [
+          17.895469665527344,
+          15.05066967010498,
+          -48.76300811767578,
+          14.827980041503906
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "model": "fno_lstm_phaseA.mnn",
+      "input_name": "bio_seq",
+      "input_shape": [
+        1,
+        20,
+        72
+      ],
+      "output_shapes": {
+        "grf_seq": [
+          1,
+          10,
+          12
+        ]
+      },
+      "shape_match": true,
+      "nan_inf_count": 0,
+      "deterministic_input_seed": 42,
+      "sample_output": {
+        "grf_seq": [
+          -0.0,
+          0.0,
+          -0.0,
+          0.0
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "model": "risk_phaseA.mnn",
+      "input_name": "risk_seq",
+      "input_shape": [
+        1,
+        20,
+        35
+      ],
+      "output_shapes": {
+        "risk_logits": [
+          1,
+          3
+        ],
+        "risk_confidence": [
+          1,
+          1
+        ]
+      },
+      "shape_match": true,
+      "nan_inf_count": 0,
+      "deterministic_input_seed": 42,
+      "sample_output": {
+        "risk_logits": [
+          1.0385700464248657,
+          -2.5688700675964355,
+          0.589139997959137
+        ],
+        "risk_confidence": [
+          0.8404499888420105
+        ]
+      },
+      "status": "PASS"
+    }
+  ],
+  "all_pass": true
+}

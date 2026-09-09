@@ -57,12 +57,19 @@ app/build/outputs/apk/debug/app-x86_64-debug.apk
 ## 7. Reproducibility
 
 ```bash
-cd projects/RehabGuardian/benchmarks
+cd benchmarks
 pip install MNN numpy
-python benchmark_stgcn.py     # ST-GCN
-python benchmark_fno.py       # FNO-LSTM
-python benchmark_risk.py      # RiskMLP
-python benchmark_pipeline.py  # full pipeline
+python benchmark_stgcn.py
+python benchmark_fno.py
+python benchmark_risk.py
+python benchmark_pipeline.py
+python benchmark_validate.py
 ```
 
-Raw data: `results/latency.csv` · Aggregates: `results/summary.json`
+Raw data: `results/{stgcn,fno,risk,pipeline}_latency.csv` · Aggregates: `results/summary.json` · Contract check: `results/model_contract.json`
+
+## 8. Contract & NaN/Inf validation (same session as benchmarks)
+
+Validated by `benchmark_validate.py` (deterministic seed-42 inputs, production models):
+all 3 models PASS — I/O names/shapes exactly match `RGPhaseAEngine.kt`; `nan_inf_count = 0` everywhere.
+Evidence: `results/model_contract.json`.
