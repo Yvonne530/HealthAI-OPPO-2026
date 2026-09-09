@@ -1,0 +1,132 @@
+cmake_minimum_required(VERSION 3.22.1)
+project("llama_android")
+
+# 设置C++标准
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 性能优化选项
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -mtune=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
+# 启用NEON指令集（ARM优化）
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-a72")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-a72")
+endif()
+
+# ========== GPU 后端配置 ==========
+# 启用 OpenCL GPU 后端
+set(GGML_VULKAN OFF CACHE BOOL "Disable Vulkan GPU backend" FORCE)
+set(GGML_OPENCL ON CACHE BOOL "Enable OpenCL GPU backend" FORCE)
+message(STATUS "OpenCL GPU 后端已启用")
+
+# Android OpenCL 配置
+if(ANDROID)
+    # Android 上的 OpenCL 库由设备厂商提供，NDK 不包含
+    # 创建 stub 库用于编译链接，运行时加载系统库
+    set(OpenCL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/opencl-headers" CACHE PATH "OpenCL include" FORCE)
+    
+    # 创建 stub 静态库提供链接符号
+    add_library(OpenCL STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/opencl-headers/opencl_stub.c
+    )
+    target_include_directories(OpenCL PUBLIC "${OpenCL_INCLUDE_DIR}")
+    
+    # 设置 find_package 使用我们的配置
+    set(OpenCL_FOUND TRUE CACHE BOOL "OpenCL found" FORCE)
+    set(OpenCL_LIBRARIES OpenCL CACHE STRING "OpenCL libraries" FORCE)
+    set(OpenCL_INCLUDE_DIRS "${OpenCL_INCLUDE_DIR}" CACHE STRING "OpenCL include dirs" FORCE)
+    
+    message(STATUS "Android OpenCL: Using stub library, runtime will load /system/vendor/lib64/libOpenCL.so")
+endif()
+
+# 查找必要的包
+find_package(Threads REQUIRED)
+
+# 添加llama.cpp库
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp")
+    message(STATUS "llama.cpp source not found, please download it first")
+endif()
+
+# 包含llama.cpp的源文件
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp")
+    add_subdirectory(llama.cpp)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/src)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/src)
+    
+    # 添加 mtmd 头文件路径
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd")
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd)
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models)
+    endif()
+endif()
+
+# 添加mtmd库（多模态支持）
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd")
+    # 检查是否有 models 子目录
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models")
+        file(GLOB MTMD_MODEL_SOURCES 
+            "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models/*.cpp"
+        )
+    else()
+        set(MTMD_MODEL_SOURCES "")
+    endif()
+    
+    # mtmd源文件
+    set(MTMD_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/mtmd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/mtmd-audio.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/mtmd-helper.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/clip.cpp
+        ${MTMD_MODEL_SOURCES}
+    )
+
+    add_library(mtmd STATIC ${MTMD_SOURCES})
+    target_include_directories(mtmd PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd/models
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/vendor
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/include
+    )
+    target_link_libraries(mtmd PUBLIC ggml llama Threads::Threads)
+    target_compile_features(mtmd PRIVATE cxx_std_17)
+endif()
+
+# 添加JNI库
+add_library(llama_jni SHARED
+    llama_jni.cpp
+)
+
+# 定义LLAMA_CPP_EXISTS宏
+if(TARGET llama)
+    target_compile_definitions(llama_jni PRIVATE LLAMA_CPP_EXISTS)
+endif()
+
+# 链接llama.cpp库
+if(TARGET llama)
+    target_link_libraries(llama_jni PRIVATE
+        llama
+        ggml
+        Threads::Threads
+        log
+        android
+    )
+endif()
+
+# 链接mtmd库（如果存在）
+if(TARGET mtmd)
+    target_link_libraries(llama_jni PRIVATE mtmd)
+    target_include_directories(llama_jni PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/tools/mtmd
+    )
+endif()
+
+# 查找log库
+find_library(log-lib log)
+target_link_libraries(llama_jni PRIVATE ${log-lib})

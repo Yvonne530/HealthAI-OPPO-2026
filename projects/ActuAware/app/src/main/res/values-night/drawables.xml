@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式下的背景色 -->
+    <drawable name="bg_switch_item">#FF000000</drawable>
+    <color name="text_primary">#FFE0E0E0</color>
+    <color name="text_secondary">#FFA0A0A0</color>
+</resources>

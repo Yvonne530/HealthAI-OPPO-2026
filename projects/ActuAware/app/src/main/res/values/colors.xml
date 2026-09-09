@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- 主题绿色（浅绿清新） -->
+    <color name="primary_green">#81C784</color>
+    <color name="primary_green_light">#A5D6A7</color>
+    <color name="primary_green_dark">#66BB6A</color>
+    <color name="accent_green">#4CAF50</color>
+    
+    <!-- 现代黑白配色 -->
+    <color name="primary_black">#1A1A1A</color>
+    <color name="secondary_black">#2C2C2C</color>
+    <color name="accent_gray">#757575</color>
+    <color name="light_gray">#F5F5F5</color>
+    <color name="medium_gray">#E0E0E0</color>
+    <color name="dark_gray">#424242</color>
+    
+    <!-- 背景色 -->
+    <color name="bg_primary">#FAFAFA</color>
+    <color name="bg_secondary">#FFFFFF</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_surface">#F8F8F8</color>
+    
+    <!-- 文字颜色 -->
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+    
+    <!-- 按钮颜色 -->
+    <color name="button_primary">#2E7D32</color>
+    <color name="button_secondary">#FFFFFF</color>
+    <color name="button_pressed">#1B5E20</color>
+    <color name="button_disabled">#E0E0E0</color>
+    
+    <!-- 功能色 -->
+    <color name="success_dark">#2E7D32</color>
+    <color name="danger_dark">#C62828</color>
+    <color name="warning_dark">#F57C00</color>
+    
+    <!-- 分隔线 -->
+    <color name="divider">#E8E8E8</color>
+    
+    <!-- 阴影（更柔和） -->
+    <color name="shadow_light">#0A000000</color>
+    <color name="shadow_medium">#14000000</color>
+    <color name="shadow_dark">#1E000000</color>
+    
+    <!-- 覆盖层 -->
+    <color name="overlay_light">#1A000000</color>
+    <color name="overlay_medium">#33000000</color>
+    
+    <!-- 默认值（用于 values-night 兼容） -->
+    <color name="surface_dark">#FFFFFFFF</color>
+    <color name="surface_variant_dark">#FFF5F5F5</color>
+    <color name="text_primary_dark">#FF212121</color>
+    <color name="text_secondary_dark">#FF757575</color>
+</resources>
