@@ -26,9 +26,11 @@ No cloud, no wearables.
 
 | | |
 |---|---|
+| 📱 Verified source on main | [projects/RehabGuardian](projects/RehabGuardian/readme.md) — builds 4 per-ABI debug APKs with gradlew assembleDebug |
+| 📉 Benchmark audit trail | [benchmarks/](projects/RehabGuardian/benchmarks/README.md) - [report](projects/RehabGuardian/benchmarks/reports/BENCHMARK_REPORT.md) - [validation](projects/RehabGuardian/benchmarks/reports/VALIDATION_REPORT.md) - PC pipeline **2.26 ms mean / P95 3.72 / P99 5.00** (MNN CPU 4-thread, 100 warm-up + 5,000 runs, raw CSVs committed) |
 | 📖 Project README | [PROJECT_A_REHABGUARDIAN.md](PROJECT_A_REHABGUARDIAN.md) |
-| 💻 Source / Branches | [`feat/st-gcn`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) (training) · [`ABtest`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) (MNN deployment) · [`android-app`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) / [`feat/android_app_two`](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) (Android apps) |
-| 📊 Benchmark & reports | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) · [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
+| 💻 Source / Branches | [feat/st-gcn](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) (training) - [ABtest](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) (MNN deployment) - [android-app](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) / [feat/android_app_two](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) (Android apps) |
+| 📊 Legacy reports | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) - [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
 
 ---
 
