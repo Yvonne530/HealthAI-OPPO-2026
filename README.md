@@ -35,6 +35,11 @@ No cloud, no wearables.
 | 💻 Source / Branches | [feat/st-gcn](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) (training) - [ABtest](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) (MNN deployment) - [android-app](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) / [feat/android_app_two](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) (Android apps) |
 | 📊 Legacy reports (incl. historical on-device run: 1.34 ms avg on Reno15 Pro, 1000 forward passes, scope = three-model forward pass only) | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) - [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
 
+🎬 **Demo video / 演示视频:**
+
+![演示视频](演示视频.mp4)
+
+
 ---
 
 ### 🤖 Project B — ActuAware (动悟) · Offline Multimodal AI Assistant for Android
