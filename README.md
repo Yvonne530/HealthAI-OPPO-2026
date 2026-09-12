@@ -8,6 +8,10 @@ preserving their original Git history and development process.
 **Developer:** Jianyi Jian (简健怡)  
 **GitHub:** [@YvonnePotter](https://github.com/Yvonne530)
 
+🏅 **Award / 奖状:**
+
+![奖状](奖状.jpg)
+
 ---
 
 ## Projects
