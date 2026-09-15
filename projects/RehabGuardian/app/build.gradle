@@ -46,7 +46,8 @@ android {
         abi {
             enable true
             reset()
-            include "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+            // MNN jniLibs only ships arm ABIs — x86 splits would crash at runtime
+            include "arm64-v8a", "armeabi-v7a"
             universalApk false
         }
     }

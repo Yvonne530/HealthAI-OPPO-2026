@@ -2,7 +2,7 @@ package com.healthai.ankle.inference
 
 import android.content.Context
 import android.util.Log
-import com.alibaba.android.mnn.MNNNetInstance
+import com.taobao.android.mnn.MNNNetInstance
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
@@ -76,7 +76,6 @@ class RGPhaseAEngine {
             numThread = 4
             forwardType = MNNForwardType.FORWARD_CPU.type
         }
-
         try {
             val stgcnPath = copyModelPair(context, "stgcn_phaseA.mnn")
             val fnoPath   = copyModelPair(context, "fno_lstm_phaseA.mnn")
@@ -194,38 +193,47 @@ class RGPhaseAEngine {
     // ── model runners ─────────────────────────────────────────────────────
 
     private fun runStgcn(input: FloatArray, outBuf: FloatArray) {
+        val session = stgcnSession ?: throw IllegalStateException("STGCN session not ready")
         System.arraycopy(input, 0, stgcnInputBuf, 0, input.size)
-        val t = stgcnNet!!.getSessionInput(stgcnSession, INPUT_VISUAL_SEQ)
+        val t = session.getInput(INPUT_VISUAL_SEQ)
+            ?: throw IllegalStateException("STGCN input tensor '$INPUT_VISUAL_SEQ' not found")
         t.setInputFloatData(stgcnInputBuf)
-        stgcnNet!!.runSession(stgcnSession)
-        val out = stgcnNet!!.getSessionOutput(stgcnSession, OUTPUT_JOINT_ANGLES)
+        session.run()
+        val out = session.getOutput(OUTPUT_JOINT_ANGLES)
+            ?: throw IllegalStateException("STGCN output tensor '$OUTPUT_JOINT_ANGLES' not found")
         val data = out.floatData
-        val len = minOf(data.size, outBuf.size)
-        System.arraycopy(data, 0, outBuf, 0, len)
+        System.arraycopy(data, 0, outBuf, 0, minOf(data.size, outBuf.size))
     }
 
     private fun runFno(input: FloatArray, outBuf: FloatArray) {
-        val t = fnoNet!!.getSessionInput(fnoSession, INPUT_BIO_SEQ)
+        val session = fnoSession ?: throw IllegalStateException("FNO session not ready")
+        val t = session.getInput(INPUT_BIO_SEQ)
+            ?: throw IllegalStateException("FNO input tensor '$INPUT_BIO_SEQ' not found")
         t.setInputFloatData(input)
-        fnoNet!!.runSession(fnoSession)
-        val out = fnoNet!!.getSessionOutput(fnoSession, OUTPUT_GRF_SEQ)
+        session.run()
+        val out = session.getOutput(OUTPUT_GRF_SEQ)
+            ?: throw IllegalStateException("FNO output tensor '$OUTPUT_GRF_SEQ' not found")
         val data = out.floatData
-        val len = minOf(data.size, outBuf.size)
-        System.arraycopy(data, 0, outBuf, 0, len)
+        System.arraycopy(data, 0, outBuf, 0, minOf(data.size, outBuf.size))
     }
 
     private fun runRisk(input: FloatArray, logitsBuf: FloatArray, confBuf: FloatArray) {
-        val t = riskNet!!.getSessionInput(riskSession, INPUT_RISK_SEQ)
+        val session = riskSession ?: throw IllegalStateException("Risk session not ready")
+        val t = session.getInput(INPUT_RISK_SEQ)
+            ?: throw IllegalStateException("Risk input tensor '$INPUT_RISK_SEQ' not found")
         t.setInputFloatData(input)
-        riskNet!!.runSession(riskSession)
+        session.run()
 
-        val logitsOut = riskNet!!.getSessionOutput(riskSession, OUTPUT_RISK_LOGITS)
-        val confOut   = riskNet!!.getSessionOutput(riskSession, OUTPUT_RISK_CONFIDENCE)
-
+        val logitsOut = session.getOutput(OUTPUT_RISK_LOGITS)
+            ?: throw IllegalStateException("Risk output tensor '$OUTPUT_RISK_LOGITS' not found")
         val ld = logitsOut.floatData
-        val cd = confOut.floatData
         System.arraycopy(ld, 0, logitsBuf, 0, minOf(ld.size, 3))
-        if (cd.isNotEmpty()) confBuf[0] = cd[0]
+
+        // risk_confidence is an optional output — missing tensor degrades to softmax max
+        session.getOutput(OUTPUT_RISK_CONFIDENCE)?.let { confOut ->
+            val cd = confOut.floatData
+            if (cd.isNotEmpty()) confBuf[0] = cd[0]
+        }
     }
 
     // ── feature post-processing ───────────────────────────────────────────
@@ -288,13 +296,14 @@ class RGPhaseAEngine {
     }
 
     private fun releaseNets() {
-        runCatching { stgcnSession?.let { stgcnNet?.releaseSession(it) } }
-        runCatching { fnoSession?.let   { fnoNet?.releaseSession(it)   } }
-        runCatching { riskSession?.let  { riskNet?.releaseSession(it)  } }
+        runCatching { stgcnSession?.release() }
+        runCatching { fnoSession?.release() }
+        runCatching { riskSession?.release() }
         runCatching { stgcnNet?.release() }
         runCatching { fnoNet?.release() }
         runCatching { riskNet?.release() }
         stgcnNet = null; fnoNet = null; riskNet = null
+        stgcnSession = null; fnoSession = null; riskSession = null
     }
 
     companion object {
