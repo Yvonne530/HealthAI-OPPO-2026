@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  長毛橘貓吉祥物
-  • 蓬松橘毛身体  • 奶油白色爪尖和嘴周围
-  • 纯黑眼睛无眼白  • 松鼠般蓬松大尾巴
-  • 软萌Q弹风格
+  長毛橘貓吉祥物 (Fixed — 100% Android AVD compatible)
+  All whiskers/lines rewritten as <path> M/L data.
+  No <line> elements (not supported in AVD).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="120dp"
@@ -11,186 +10,114 @@
     android:viewportWidth="120"
     android:viewportHeight="120">
 
-    <!-- ═══ FLUFFY SQUIRREL TAIL (behind body) ═══ -->
-    <!-- Tail base large poof -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 85,80 C 105,65 118,50 115,35 C 112,20 100,15 90,22 C 82,28 80,40 83,55 C 86,70 85,80 85,80 Z" />
-    <!-- Tail fur texture layers -->
-    <path
-        android:fillColor="#FDBA74"
-        android:pathData="M 88,78 C 108,62 118,48 114,34 C 111,24 102,20 93,26 C 87,30 86,42 89,56 Z" />
-    <path
-        android:fillColor="#FFF3E0"
-        android:pathData="M 91,76 C 110,61 116,48 112,36 C 110,28 103,25 96,30 C 92,33 92,44 94,56 Z" />
-    <!-- Tail tip cream poof -->
-    <path
-        android:fillColor="#FFF3E0"
-        android:pathData="M 108,22 C 115,16 120,20 118,28 C 116,36 108,38 104,32 C 100,26 102,20 108,22 Z" />
+    <!-- Tail poof layers (behind body) -->
+    <path android:fillColor="#FB923C"
+        android:pathData="M85,80 C105,65 118,50 115,35 C112,20 100,15 90,22 C82,28 80,40 83,55 C86,70 85,80 85,80Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M88,78 C108,62 118,48 114,34 C111,24 102,20 93,26 C87,30 86,42 89,56Z"/>
+    <path android:fillColor="#FFF3E0"
+        android:pathData="M91,76 C110,61 116,48 112,36 C110,28 103,25 96,30 C92,33 92,44 94,56Z"/>
+    <path android:fillColor="#FFF3E0"
+        android:pathData="M104,18 C108,12 116,14 117,22 C118,30 111,36 106,30 C101,24 101,22 104,18Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M107,20 C110,16 115,18 115,24 C115,30 110,32 107,28 C104,24 105,22 107,20Z"/>
 
-    <!-- ═══ BODY ═══ -->
-    <!-- Main body - round chubby orange -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 30,90 C 20,85 15,70 18,55 C 21,40 35,28 55,25 C 75,22 90,35 90,55 C 90,75 78,92 60,95 C 45,97 38,93 30,90 Z" />
-    <!-- Belly / chest cream patch -->
-    <path
-        android:fillColor="#FFF3E0"
-        android:pathData="M 40,88 C 32,82 30,70 33,58 C 36,48 46,42 57,42 C 68,42 76,50 75,62 C 74,75 65,88 55,90 C 48,91 43,90 40,88 Z" />
-    <!-- Fur texture stripes -->
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="1.5"
-        android:pathData="M 35,50 C 38,47 40,50 37,53" />
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="1.5"
-        android:pathData="M 72,45 C 75,42 77,46 74,49" />
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="1.5"
-        android:pathData="M 28,65 C 30,62 33,65 30,68" />
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="1.5"
-        android:pathData="M 80,65 C 82,62 85,66 82,69" />
+    <!-- Body -->
+    <path android:fillColor="#FB923C"
+        android:pathData="M30,90 C20,85 15,70 18,55 C21,40 35,28 55,25 C75,22 90,35 90,55 C90,75 78,92 60,95 C45,97 38,93 30,90Z"/>
+    <path android:fillColor="#FFF3E0"
+        android:pathData="M40,88 C32,82 30,70 33,58 C36,48 46,42 57,42 C68,42 76,50 75,62 C74,75 65,88 55,90 C48,91 43,90 40,88Z"/>
+    <path android:strokeColor="#F97316" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M33,52 C35,48 38,50 36,54"/>
+    <path android:strokeColor="#F97316" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M73,46 C76,42 79,46 76,50"/>
 
-    <!-- ═══ HEAD ═══ -->
-    <!-- Head - big round -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 25,45 C 22,28 32,10 52,6 C 72,2 86,14 87,32 C 88,50 76,62 58,64 C 38,66 27,58 25,45 Z" />
+    <!-- Head -->
+    <path android:fillColor="#FB923C"
+        android:pathData="M25,45 C22,28 32,10 52,6 C72,2 86,14 87,32 C88,50 76,62 58,64 C38,66 27,58 25,45Z"/>
 
-    <!-- ═══ EARS ═══ -->
     <!-- Left ear -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 30,18 C 26,8 32,2 38,8 C 44,14 42,22 38,24 Z" />
-    <!-- Left ear inner -->
-    <path
-        android:fillColor="#FDBA74"
-        android:pathData="M 31,17 C 28,10 33,6 37,10 C 41,14 40,20 37,22 Z" />
+    <path android:fillColor="#FB923C"
+        android:pathData="M30,18 C26,8 32,2 38,8 C44,14 42,22 38,24Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M31,17 C28,10 33,6 37,10 C41,14 40,20 37,22Z"/>
+    <path android:strokeColor="#F97316" android:strokeWidth="1.5" android:fillColor="#00000000"
+        android:pathData="M32,10 C30,4 35,1 36,6"/>
+
     <!-- Right ear -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 75,14 C 78,4 86,2 88,10 C 90,18 85,24 80,22 Z" />
-    <!-- Right ear inner -->
-    <path
-        android:fillColor="#FDBA74"
-        android:pathData="M 76,14 C 78,7 84,6 86,12 C 87,18 83,22 80,20 Z" />
-    <!-- Ear tufts (long fur tips) -->
-    <path
-        android:fillColor="#F97316"
-        android:pathData="M 32,10 C 30,5 34,2 36,6" />
-    <path
-        android:fillColor="#F97316"
-        android:pathData="M 82,7 C 84,2 88,4 86,8" />
-
-    <!-- ═══ FACE ═══ -->
-    <!-- Muzzle (cream/white area around mouth) -->
-    <path
-        android:fillColor="#FFF3E0"
-        android:pathData="M 44,44 C 44,38 50,34 57,34 C 64,34 70,38 70,44 C 70,52 64,58 57,56 C 50,54 44,50 44,44 Z" />
-
-    <!-- ═══ EYES (pure black, no whites) ═══ -->
-    <!-- Left eye - big shiny black circle -->
-    <path
-        android:fillColor="#0C0A09"
-        android:pathData="M 38,30 C 38,24 44,20 50,22 C 56,24 58,30 56,36 C 54,42 47,44 42,40 C 38,37 38,34 38,30 Z" />
-    <!-- Left eye shine dot (pure white highlight) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 44,26 C 44,24 46,23 47,25 C 48,27 47,28 45,28 C 44,27 44,26 44,26 Z" />
-
-    <!-- Right eye - big shiny black circle -->
-    <path
-        android:fillColor="#0C0A09"
-        android:pathData="M 60,28 C 62,22 68,20 73,23 C 78,26 78,33 75,38 C 72,43 65,44 61,40 C 58,36 59,31 60,28 Z" />
-    <!-- Right eye shine dot -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 66,24 C 67,22 69,22 69,24 C 70,26 69,27 67,27 C 66,26 66,25 66,24 Z" />
-
-    <!-- ═══ NOSE ═══ -->
-    <path
-        android:fillColor="#FB7185"
-        android:pathData="M 54,44 C 55,42 59,42 60,44 C 61,46 58,48 56,48 C 54,47 53,46 54,44 Z" />
-
-    <!-- ═══ WHISKERS ═══ -->
-    <!-- Left whiskers -->
-    <line
-        x1="44" y1="46" x2="22" y2="42"
-        android:strokeColor="#78716C" android:strokeWidth="1.2" />
-    <line
-        x1="44" y1="48" x2="22" y2="50"
-        android:strokeColor="#78716C" android:strokeWidth="1.2" />
-    <line
-        x1="44" y1="50" x2="24" y2="56"
-        android:strokeColor="#78716C" android:strokeWidth="1.2" />
-    <!-- Right whiskers -->
-    <line
-        x1="70" y1="46" x2="92" y2="42"
-        android:strokeColor="#78716C" android:strokeWidth="1.2" />
-    <line
-        x1="70" y1="48" x2="92" y2="50"
-        android:strokeColor="#78716C" android:strokeWidth="1.2" />
-    <line
-        x1="70" y1="50" x2="90" y2="56"
-        android:strokeColor="#78716C" android:strokeWidth="1.2" />
-
-    <!-- ═══ MOUTH ═══ -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#C2410C"
-        android:strokeWidth="1.5"
-        android:pathData="M 54,50 C 55,53 57,54 57,54 C 57,54 59,53 60,50" />
-
-    <!-- ═══ PAWS (cream-tipped) ═══ -->
-    <!-- Left front paw -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 22,85 C 18,80 20,74 26,73 C 32,72 36,78 34,84 C 32,88 26,90 22,85 Z" />
-    <path
-        android:fillColor="#FFF3E0"
-        android:pathData="M 23,86 C 20,82 22,77 27,77 C 31,77 33,81 31,85 C 30,87 25,89 23,86 Z" />
-    <!-- Toe beans left -->
+    <path android:fillColor="#FB923C"
+        android:pathData="M75,14 C78,4 86,2 88,10 C90,18 85,24 80,22Z"/>
     <path android:fillColor="#FDBA74"
-        android:pathData="M 22,83 C 22,81 24,80 25,82 C 26,84 24,85 23,84 Z" />
-    <path android:fillColor="#FDBA74"
-        android:pathData="M 26,84 C 26,82 28,81 29,83 C 30,85 28,86 27,85 Z" />
+        android:pathData="M76,14 C78,7 84,6 86,12 C87,18 83,22 80,20Z"/>
+    <path android:strokeColor="#F97316" android:strokeWidth="1.5" android:fillColor="#00000000"
+        android:pathData="M82,7 C84,1 89,3 87,8"/>
 
-    <!-- Right front paw -->
-    <path
-        android:fillColor="#FB923C"
-        android:pathData="M 86,85 C 90,80 88,74 82,73 C 76,72 72,78 74,84 C 76,88 82,90 86,85 Z" />
-    <path
-        android:fillColor="#FFF3E0"
-        android:pathData="M 85,86 C 88,82 86,77 81,77 C 77,77 75,81 77,85 C 78,87 83,89 85,86 Z" />
-    <!-- Toe beans right -->
-    <path android:fillColor="#FDBA74"
-        android:pathData="M 84,83 C 84,81 82,80 81,82 C 80,84 82,85 83,84 Z" />
-    <path android:fillColor="#FDBA74"
-        android:pathData="M 80,84 C 80,82 78,81 77,83 C 76,85 78,86 79,85 Z" />
+    <!-- Muzzle cream -->
+    <path android:fillColor="#FFF3E0"
+        android:pathData="M44,44 C44,38 50,34 57,34 C64,34 70,38 70,44 C70,52 64,58 57,56 C50,54 44,50 44,44Z"/>
 
-    <!-- ═══ TABBY FOREHEAD STRIPES ═══ -->
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="2"
-        android:pathData="M 48,12 C 50,8 52,8 53,12" />
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="2"
-        android:pathData="M 55,10 C 57,6 59,6 60,10" />
-    <path
-        android:fillColor="#F97316"
-        android:strokeColor="#F97316"
-        android:strokeWidth="2"
-        android:pathData="M 62,12 C 64,8 66,8 67,12" />
+    <!-- Left eye (pure black) -->
+    <path android:fillColor="#0C0A09"
+        android:pathData="M38,30 C38,24 44,20 50,22 C56,24 58,30 56,36 C54,42 47,44 42,40 C38,37 38,34 38,30Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M43,25 C43,23 46,22 47,25 C48,27 46,28 44,28 C43,27 43,26 43,25Z"/>
+
+    <!-- Right eye (pure black) -->
+    <path android:fillColor="#0C0A09"
+        android:pathData="M60,28 C62,22 68,20 73,23 C78,26 78,33 75,38 C72,43 65,44 61,40 C58,36 59,31 60,28Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M65,24 C66,22 68,22 69,24 C70,26 68,27 66,27 C65,26 65,25 65,24Z"/>
+
+    <!-- Nose -->
+    <path android:fillColor="#FB7185"
+        android:pathData="M54,44 C55,42 59,42 60,44 C61,46 58,48 56,48 C54,47 53,46 54,44Z"/>
+
+    <!-- LEFT WHISKERS — path M/L format (no <line>) -->
+    <path android:strokeColor="#78716C" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M44,46 L22,42"/>
+    <path android:strokeColor="#78716C" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M44,49 L22,50"/>
+    <path android:strokeColor="#78716C" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M44,52 L24,57"/>
+
+    <!-- RIGHT WHISKERS -->
+    <path android:strokeColor="#78716C" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M70,46 L92,42"/>
+    <path android:strokeColor="#78716C" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M70,49 L92,50"/>
+    <path android:strokeColor="#78716C" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M70,52 L90,57"/>
+
+    <!-- Mouth -->
+    <path android:strokeColor="#C2410C" android:strokeWidth="1.5" android:fillColor="#00000000"
+        android:pathData="M54,50 C55,53 57,54 57,54 C57,54 59,53 60,50"/>
+
+    <!-- Forehead tabby stripes -->
+    <path android:strokeColor="#F97316" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M48,12 C50,8 52,8 53,12"/>
+    <path android:strokeColor="#F97316" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M55,10 C57,6 59,6 60,10"/>
+    <path android:strokeColor="#F97316" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M62,12 C64,8 66,8 67,12"/>
+
+    <!-- Left paw (cream-tipped) -->
+    <path android:fillColor="#FB923C"
+        android:pathData="M22,85 C18,80 20,74 26,73 C32,72 36,78 34,84 C32,88 26,90 22,85Z"/>
+    <path android:fillColor="#FFF3E0"
+        android:pathData="M23,86 C20,82 22,77 27,77 C31,77 33,81 31,85 C30,87 25,89 23,86Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M21,83 C21,81 23,80 24,82 C25,84 23,85 22,84Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M26,84 C26,82 28,81 29,83 C30,85 28,86 27,85Z"/>
+
+    <!-- Right paw (cream-tipped) -->
+    <path android:fillColor="#FB923C"
+        android:pathData="M86,85 C90,80 88,74 82,73 C76,72 72,78 74,84 C76,88 82,90 86,85Z"/>
+    <path android:fillColor="#FFF3E0"
+        android:pathData="M85,86 C88,82 86,77 81,77 C77,77 75,81 77,85 C78,87 83,89 85,86Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M84,83 C84,81 82,80 81,82 C80,84 82,85 83,84Z"/>
+    <path android:fillColor="#FDBA74"
+        android:pathData="M79,84 C79,82 77,81 76,83 C75,85 77,86 78,85Z"/>
 
 </vector>

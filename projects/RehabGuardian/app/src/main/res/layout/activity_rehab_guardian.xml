@@ -1,281 +1,311 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- activity_rehab_guardian.xml
-     Design: 阳光奶油橘色 · 软萌Q弹 · 长毛橘猫元素
-     Target: OPPO Reno15 Pro  1080×2354  Android 16 -->
-<androidx.constraintlayout.widget.ConstraintLayout
+<!--
+  RehabGuardian — 国一级产品 UI
+  Theme: 深色专业底色 + 阳光橘猫顶栏
+  Target: OPPO Reno15 Pro  1080×2354
+
+  Panel structure (top → bottom inside NestedScrollView):
+    [TOP BAR]        — cat mascot + session controls
+    [RISK CARD]      — RiskCardView: badge + confidence arc + reasons + future text
+    [GRF CHART]      — GrfForecastView: left/right Fz history + FNO 10-frame prediction
+    [COMPARE VIEW]   — BestFrameCompareView: current skeleton vs best skeleton
+    [CAMERA STRIP]   — small preview + pose overlay
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/cream_bg">
+    android:background="#080F12">
 
-    <!-- ══ Camera Preview (full-height background) ══ -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
-        android:layout_width="0dp"
+    <!-- ══════════════════════════════════════════════════════════════════
+         FULL-SCREEN CAMERA PREVIEW (background layer)
+         Cropped to top 55% via clipBounds in Activity
+    ═══════════════════════════════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/cameraContainer"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:scaleType="fillCenter" />
+        app:layout_constraintHeight_percent="0.48">
 
-    <!-- ══ Pose skeleton overlay ══ -->
-    <com.healthai.ankle.ui.PoseOverlayView
-        android:id="@+id/overlayView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:scaleType="fillCenter" />
 
-    <!-- ══ TOP BAR ══ -->
-    <LinearLayout
-        android:id="@+id/topBar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="@drawable/bg_top_bar"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        <com.healthai.ankle.ui.PoseOverlayView
+            android:id="@+id/overlayView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-        <!-- Cat mascot icon -->
-        <ImageView
-            android:id="@+id/ivCatMascot"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:src="@drawable/ic_cat_mascot"
-            android:layout_marginEnd="10dp"
-            android:scaleType="fitCenter" />
+        <!-- Gradient scrim at bottom of camera to blend into panels -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/scrim_bottom" />
+    </FrameLayout>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SCROLLABLE CONTENT (over the camera background)
+    ═══════════════════════════════════════════════════════════════════ -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical">
 
-            <TextView
-                android:text="RehabGuardian"
-                android:textSize="18sp"
-                android:textColor="@color/orange_primary"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+            <!-- ─────────────── SPACER: camera preview area ────────────── -->
+            <!-- Height ≈ 42% of screen → camera shows through -->
+            <Space
+                android:id="@+id/cameraSpacerView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0" />
 
-            <TextView
-                android:text="踝关节康复守护猫 🐾"
-                android:textSize="11sp"
-                android:textColor="@color/orange_muted"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvFrameCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="帧: 0"
-            android:textSize="10sp"
-            android:textColor="@color/orange_muted"
-            android:fontFamily="@android:style/TextAppearance.Material.Body1" />
-    </LinearLayout>
-
-    <!-- ══ BOTTOM CARD ══ -->
-    <LinearLayout
-        android:id="@+id/bottomCard"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/bg_bottom_card"
-        android:padding="18dp"
-        android:elevation="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- Risk label row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvRiskLabel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🐱 等待检测…"
-                android:textSize="22sp"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                android:textColor="@color/orange_primary" />
-
-            <TextView
-                android:id="@+id/tvConfidence"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="置信度: -"
-                android:textSize="12sp"
-                android:textColor="@color/orange_muted"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1" />
-        </LinearLayout>
-
-        <!-- Risk progress bar (cream track, orange fill) -->
-        <ProgressBar
-            android:id="@+id/viewRiskBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="6dp"
-            android:progressDrawable="@drawable/risk_progress"
-            android:max="100"
-            android:progress="0" />
-
-        <!-- Risk score + motion score row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp">
-
-            <TextView
-                android:id="@+id/tvRiskScore"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="风险概率: -"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1" />
-
-            <TextView
-                android:id="@+id/tvMotionScore"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="运动评分: -"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                android:gravity="end" />
-        </LinearLayout>
-
-        <!-- Knee angles row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="10dp">
-
+            <!-- ─────────────────── BOTTOM SHEET AREA ─────────────────── -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical"
-                android:background="@drawable/bg_knee_card"
-                android:padding="10dp">
+                android:background="@drawable/bg_bottom_sheet"
+                android:paddingBottom="24dp">
 
+                <!-- ══ TOP BAR (cat + controls) ══ -->
+                <LinearLayout
+                    android:id="@+id/topBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="10dp">
+
+                    <!-- Drag handle pill -->
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="0" />
+
+                    <ImageView
+                        android:id="@+id/ivCatMascot"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:src="@drawable/ic_cat_mascot"
+                        android:scaleType="fitCenter"
+                        android:layout_marginEnd="10dp"
+                        android:contentDescription="猫猫吉祥物" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:text="RehabGuardian"
+                            android:textSize="17sp"
+                            android:textColor="#F97316"
+                            android:fontFamily="@font/nunito_bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <TextView
+                            android:id="@+id/tvFrameCount"
+                            android:text="等待开始…"
+                            android:textSize="10sp"
+                            android:textColor="#64748B"
+                            android:fontFamily="@font/nunito"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- Session toggle -->
+                    <Button
+                        android:id="@+id/btnStartStop"
+                        android:layout_width="wrap_content"
+                        android:layout_height="38dp"
+                        android:text="▶ 开始"
+                        android:textSize="13sp"
+                        android:fontFamily="@font/nunito_bold"
+                        android:background="@drawable/btn_orange_pill"
+                        android:textColor="#FFFFFF"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:stateListAnimator="@null"
+                        android:layout_marginEnd="8dp" />
+
+                    <!-- Report -->
+                    <ImageButton
+                        android:id="@+id/btnReport"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:src="@android:drawable/ic_menu_share"
+                        android:background="@drawable/btn_icon_circle"
+                        android:contentDescription="导出报告"
+                        android:tint="#F97316"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- ══ RISK CARD (primary hero element) ══ -->
+                <com.healthai.ankle.ui.RiskCardView
+                    android:id="@+id/riskCardView"
+                    android:layout_width="match_parent"
+                    android:layout_height="260dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="14dp"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- ══ GRF FORECAST CHART ══ -->
                 <TextView
-                    android:text="左膝"
-                    android:textSize="10sp"
-                    android:textColor="@color/orange_muted"
-                    android:fontFamily="@android:style/TextAppearance.Material.Body1"
+                    android:text="地面反作用力  ·  含未来预测"
+                    android:textSize="11sp"
+                    android:textColor="#64748B"
+                    android:fontFamily="@font/nunito_bold"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginBottom="4dp" />
 
+                <com.healthai.ankle.ui.GrfForecastView
+                    android:id="@+id/grfForecastView"
+                    android:layout_width="match_parent"
+                    android:layout_height="140dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="14dp"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- ══ BEST FRAME SKELETON COMPARE ══ -->
                 <TextView
-                    android:id="@+id/tvKneeLeft"
-                    android:text="--°"
-                    android:textSize="24sp"
-                    android:textColor="@color/green_accent"
-                    android:fontFamily="@android:style/TextAppearance.Material.Body1"
+                    android:text="动作对比  ·  当前 vs 最佳"
+                    android:textSize="11sp"
+                    android:textColor="#64748B"
+                    android:fontFamily="@font/nunito_bold"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginBottom="4dp" />
 
-            <View android:layout_width="8dp" android:layout_height="1dp" />
+                <com.healthai.ankle.ui.BestFrameCompareView
+                    android:id="@+id/compareView"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="14dp"
+                    android:layout_marginBottom="10dp" />
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/bg_knee_card"
-                android:padding="10dp">
+                <!-- ══ METRIC CHIPS ROW ══ -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="14dp"
+                    android:layout_marginBottom="8dp">
 
-                <TextView
-                    android:text="右膝"
-                    android:textSize="10sp"
-                    android:textColor="@color/orange_muted"
-                    android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_metric_chip"
+                        android:padding="12dp"
+                        android:layout_marginEnd="6dp">
+                        <TextView
+                            android:text="左膝"
+                            android:textSize="10sp"
+                            android:textColor="#64748B"
+                            android:fontFamily="@font/nunito"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                        <TextView
+                            android:id="@+id/tvKneeLeft"
+                            android:text="-- °"
+                            android:textSize="22sp"
+                            android:textColor="#22C55E"
+                            android:fontFamily="@font/nunito_bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tvKneeRight"
-                    android:text="--°"
-                    android:textSize="24sp"
-                    android:textColor="@color/green_accent"
-                    android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_metric_chip"
+                        android:padding="12dp"
+                        android:layout_marginEnd="6dp">
+                        <TextView
+                            android:text="右膝"
+                            android:textSize="10sp"
+                            android:textColor="#64748B"
+                            android:fontFamily="@font/nunito"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                        <TextView
+                            android:id="@+id/tvKneeRight"
+                            android:text="-- °"
+                            android:textSize="22sp"
+                            android:textColor="#22C55E"
+                            android:fontFamily="@font/nunito_bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_metric_chip"
+                        android:padding="12dp">
+                        <TextView
+                            android:text="推理延迟"
+                            android:textSize="10sp"
+                            android:textColor="#64748B"
+                            android:fontFamily="@font/nunito"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                        <TextView
+                            android:id="@+id/tvLatency"
+                            android:text="-- ms"
+                            android:textSize="22sp"
+                            android:textColor="#7DD3FC"
+                            android:fontFamily="@font/nunito_bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- ══ HIDDEN fields referenced by Activity ══ -->
+                <!-- These are invisible but keep backward compat with older code refs -->
+                <TextView android:id="@+id/tvRiskLabel"   android:visibility="gone"
+                    android:layout_width="0dp" android:layout_height="0dp" />
+                <TextView android:id="@+id/tvRiskScore"   android:visibility="gone"
+                    android:layout_width="0dp" android:layout_height="0dp" />
+                <TextView android:id="@+id/tvMotionScore" android:visibility="gone"
+                    android:layout_width="0dp" android:layout_height="0dp" />
+                <TextView android:id="@+id/tvHint"        android:visibility="gone"
+                    android:layout_width="0dp" android:layout_height="0dp" />
+                <TextView android:id="@+id/tvConfidence"  android:visibility="gone"
+                    android:layout_width="0dp" android:layout_height="0dp" />
+                <ProgressBar android:id="@+id/viewRiskBar" android:visibility="gone"
+                    android:layout_width="0dp" android:layout_height="0dp"
+                    android:max="100" />
+
             </LinearLayout>
         </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
-        <!-- Hint banner -->
-        <TextView
-            android:id="@+id/tvHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_hint"
-            android:padding="10dp"
-            android:text=""
-            android:textSize="12sp"
-            android:textColor="@color/orange_dark"
-            android:fontFamily="@android:style/TextAppearance.Material.Body1"
-            android:visibility="invisible" />
-
-        <!-- Action buttons row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="14dp">
-
-            <Button
-                android:id="@+id/btnStartStop"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="▶ 开始"
-                android:textSize="15sp"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                android:background="@drawable/btn_orange_pill"
-                android:textColor="@color/white" />
-
-            <View android:layout_width="10dp" android:layout_height="1dp" />
-
-            <Button
-                android:id="@+id/btnReport"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="📄 报告"
-                android:textSize="15sp"
-                android:fontFamily="@android:style/TextAppearance.Material.Body1"
-                android:background="@drawable/btn_cream_pill"
-                android:textColor="@color/orange_primary"
-                android:visibility="gone" />
-        </LinearLayout>
-
-    </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

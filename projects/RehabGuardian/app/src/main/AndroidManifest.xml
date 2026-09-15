@@ -29,12 +29,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Main activity (entry after splash) -->
-        <activity
-            android:name="com.erlab.actuaware.MainActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-
         <!-- Main camera + inference screen -->
         <activity
             android:name=".ui.RehabGuardianActivity"

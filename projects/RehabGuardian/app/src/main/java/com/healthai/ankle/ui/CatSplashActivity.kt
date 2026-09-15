@@ -14,7 +14,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.healthai.ankle.R
-import com.erlab.actuaware.MainActivity
 
 /**
  * Splash screen shown while the MNN engine is loading.
@@ -139,7 +138,7 @@ class CatSplashActivity : AppCompatActivity() {
 
         // Transition to main after 2.2 s (models load in background)
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, MainActivity::class.java))
+            startActivity(Intent(this, RehabGuardianActivity::class.java))
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
             finish()
         }, 2200)

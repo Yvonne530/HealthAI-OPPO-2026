@@ -81,7 +81,7 @@ dependencies {
     implementation 'androidx.room:room-ktx:2.6.1'
     kapt 'androidx.room:room-compiler:2.6.1'
 
-    implementation 'com.google.mediapipe:tasks-vision:0.10.10'
+    implementation 'com.google.mediapipe:tasks-vision:0.10.14'
 
     // Stub MNN - create a stub class at compile time
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
