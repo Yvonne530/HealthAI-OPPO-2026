@@ -1,0 +1,10 @@
+Place the MNN Android runtime AAR here:
+  MNN-x.x.x-release.aar
+
+Download from: https://github.com/alibaba/MNN/releases
+
+Run the helper script:
+  bash scripts/download_mnn_aar.sh
+
+The AAR filename must match what's in app/build.gradle:
+  implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'])

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RehabGuardian" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#F97316</item>
+        <item name="colorPrimaryVariant">#C2410C</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSurface">#131F23</item>
+        <item name="android:windowBackground">#090E10</item>
+        <item name="android:statusBarColor">#090E10</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#090E10</item>
+    </style>
+
+    <style name="Theme.RehabGuardian.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">#FFF7ED</item>
+        <item name="android:statusBarColor">#FFF7ED</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
