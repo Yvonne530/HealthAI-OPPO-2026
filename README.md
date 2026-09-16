@@ -42,7 +42,54 @@ No cloud, no wearables.
 | 💻 Source / Branches | [feat/st-gcn](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/st-gcn) (training) - [ABtest](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/ABtest) (MNN deployment) - [android-app](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/android-app) / [feat/android_app_two](https://github.com/Yvonne530/HealthAI-OPPO-2026/tree/feat/android_app_two) (Android apps) |
 | 📊 Legacy reports (incl. historical on-device run: 1.34 ms avg on Reno15 Pro, 1000 forward passes, scope = three-model forward pass only) | [ONNX export consistency report](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/feat/st-gcn/ONNX_TEST_REPORT.md) - [MNN integration guide](https://github.com/Yvonne530/HealthAI-OPPO-2026/blob/ABtest/MNN_ANDROID_INTEGRATION_GUIDE.md) |
 
-🎬 **Demo video / 演示视频:**
+## 📸 App Screenshots / 运行截图
+
+| 实时姿态估计 + 风险评估 | 运行界面 |
+|---|---|
+| ![实时姿态估计与风险评估](docs/screenshots/app_screenshot_1.png) | ![运行界面](docs/screenshots/app_screenshot_2.png) |
+
+## ⚡ Quick Start / 快速开始
+
+**方式一：直接安装 APK(推荐)** / *Install the prebuilt APK*
+
+1. 从 [Release v1.0.2](https://github.com/Yvonne530/HealthAI-OPPO-2026/releases/tag/v1.0.2)
+   下载 `app-arm64-v8a-debug.apk`(现代手机)或 `app-armeabi-v7a-debug.apk`(老设备)。
+2. 安装时允许"未知来源应用"(debug 签名包)。
+3. 打开 App → 授予**相机权限** → 将手机立于侧面,对准腿部/膝盖,开始动作即可看到
+   实时骨架、关节角度、GRF 预测曲线与三级风险卡片(🐈 低 / 😿 中 / 🙀 高)。
+
+> 全程**离线**推理:相机 → 姿态 → 三模型链路都在手机端完成,无任何网络请求。
+> 整条推理链 ≈ 4 ms,远小于 30 fps 的 33 ms 帧预算。
+
+**方式二：从源码构建** / *Build from source*
+
+```bash
+git clone https://github.com/Yvonne530/HealthAI-OPPO-2026.git
+cd HealthAI-OPPO-2026/projects/RehabGuardian
+./gradlew assembleDebug        # 需要 JDK 17;产物在 app/build/outputs/apk/debug/
+```
+
+| 要求 / Requirement | 值 |
+|---|---|
+| Android | 8.0+(API 26+),arm64-v8a 或 armeabi-v7a |
+| 权限 | 相机(运行时授予) |
+| 构建 | JDK 17 · AGP 8.3.2 · Gradle 8.13 |
+
+## 🏗️ 架构 / Architecture
+
+```mermaid
+graph LR
+    A[Camera 30fps] --> B[MediaPipe Pose<br>33 关键点 × 20 帧]
+    B --> C[ST-GCN ×4<br>关节角度估计]
+    C --> D[FeatureBuilder<br>norm_stats 归一化]
+    D --> E[FNO-LSTM<br>GRF 地面反作用力预测]
+    E --> F[RiskMLP<br>风险 logits + 置信度]
+    F --> G[FSM 风险分级<br>低 / 中 / 高]
+    style A fill:#e8f4fd
+    style G fill:#fde8e8
+```
+
+## 🎬 Demo video / 演示视频
 
 ![演示视频](演示视频.mp4)
 
