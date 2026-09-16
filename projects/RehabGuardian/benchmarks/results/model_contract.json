@@ -19,6 +19,13 @@
       "shape_match": true,
       "nan_inf_count": 0,
       "deterministic_input_seed": 42,
+      "warmup_runs": 1,
+      "repeated_runs": 4,
+      "reproducible": true,
+      "max_abs_drift": 0.0,
+      "output_magnitude": {
+        "joint_angles": 48.76300811767578
+      },
       "sample_output": {
         "joint_angles": [
           17.895469665527344,
@@ -47,12 +54,19 @@
       "shape_match": true,
       "nan_inf_count": 0,
       "deterministic_input_seed": 42,
+      "warmup_runs": 1,
+      "repeated_runs": 4,
+      "reproducible": true,
+      "max_abs_drift": 0.0,
+      "output_magnitude": {
+        "grf_seq": 0.13361041247844696
+      },
       "sample_output": {
         "grf_seq": [
-          -0.0,
-          0.0,
-          -0.0,
-          0.0
+          -0.05152000114321709,
+          -0.0225600004196167,
+          -0.032249998301267624,
+          0.0009899999713525176
         ]
       },
       "status": "PASS"
@@ -78,6 +92,14 @@
       "shape_match": true,
       "nan_inf_count": 0,
       "deterministic_input_seed": 42,
+      "warmup_runs": 1,
+      "repeated_runs": 4,
+      "reproducible": true,
+      "max_abs_drift": 0.0,
+      "output_magnitude": {
+        "risk_logits": 2.568871021270752,
+        "risk_confidence": 0.8404680490493774
+      },
       "sample_output": {
         "risk_logits": [
           1.0385700464248657,
@@ -85,7 +107,7 @@
           0.589139997959137
         ],
         "risk_confidence": [
-          0.8404499888420105
+          0.840470016002655
         ]
       },
       "status": "PASS"

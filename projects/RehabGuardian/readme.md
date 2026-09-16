@@ -13,8 +13,8 @@ On-device real-time rehabilitation risk monitoring: MediaPipe pose → ST-GCN �
 
 | Validation | Evidence | Status |
 |---|---|---|
-| Build reproducibility | `gradlew assembleDebug` → 4 个分 ABI debug APK (JDK 17 / Gradle 8.13 / AGP 8.3.2) | ✅ |
-| Model-level latency benchmark | 4 组件 × (100 warm-up + 5,000 measured)，原始数据已提交 `benchmarks/results/` | ✅ |
+| Build reproducibility | `gradlew assembleDebug` → 分 ABI debug APK（arm64-v8a / armeabi-v7a，JDK 17 / Gradle 8.13 / AGP 8.3.2） | ✅ |
+| Model-level latency benchmark | 4 组件 × 1,000 measured（4 块 × ≤250，块间空闲间隔），每次运行均通过 flatness 审计（漂移 ≤ 1.34×），原始数据已提交 `benchmarks/results/` | ✅ |
 | Tensor contract | `benchmark_validate.py` → `results/model_contract.json`（3/3 PASS，I/O 名称/形状与 `RGPhaseAEngine.kt` 一致） | ✅ |
 | NaN / Inf safety | 同一脚本验证，全部输出 `nan_inf_count = 0`（确定性 seed-42 输入） | ✅ |
 | PyTorch→ONNX→MNN numerical consistency | 原始训练 checkpoint 不在本仓库中，**尚未实测，不提供编造数字** | ⏳ pending |
@@ -27,17 +27,19 @@ On-device real-time rehabilitation risk monitoring: MediaPipe pose → ST-GCN �
 
 | Stage | Mean | P50 | P95 | P99 | Max |
 |---|---:|---:|---:|---:|---:|
-| ST-GCN `[1,5,33,3]→[1,23]` | 1.28 ms | 1.13 | 2.40 | 3.31 | 7.43 |
-| FNO-LSTM `[1,20,72]→[1,10,12]` | 0.73 ms | 0.64 | 1.14 | 2.30 | 4.29 |
-| RiskMLP `[1,20,35]→logits+conf` | 0.13 ms | 0.09 | 0.20 | 0.96 | 3.14 |
-| **Full Pipeline**（含特征构建） | **2.26 ms** | **2.01** | **3.72** | **5.00** | 7.71 |
+| ST-GCN `[1,5,33,3]→[1,23]` | 0.885 ms | 0.695 | 1.802 | 2.419 | 3.976 |
+| FNO-LSTM `[1,20,72]→[1,10,12]` | 0.579 ms | 0.426 | 1.499 | 2.352 | 4.216 |
+| RiskMLP `[1,20,35]→logits+conf` | 0.084 ms | 0.050 | 0.176 | 0.787 | 2.612 |
+| **Full Pipeline**（4×ST-GCN + 特征构建，含 4 次姿态分支） | **3.965 ms** | **3.781** | **5.574** | **6.382** | 7.894 |
 
 **Benchmark Protocol**
 
 ```text
 Backend   : MNN 3.6.1 (CPU forward, 4 threads — matches RGPhaseAEngine.kt)
-Warm-up   : 100 iterations
-Measured  : 5,000 iterations per component
+Measured  : 1,000 iterations per component, 4 blocks × ≤250, idle gaps between
+            blocks; each run flatness-audited before evidence is written
+Pipeline  : mirrors RGPhaseAEngine.runPipeline() — 4 × ST-GCN chunks + feature
+            building (norm_stats 归一化) + FNO + risk head
 Timing    : time.perf_counter() per iteration, session reused
 Inputs    : production shapes, deterministic (seed 42 for contract check)
 NaN / Inf : 0 occurrences
@@ -73,7 +75,7 @@ python benchmark_pipeline.py    # 完整 pipeline
 python benchmark_validate.py    # 契约 + NaN/Inf 校验
 ```
 
-所有数字的原始 latency 数据（每个组件 5,000 行 CSV）与统计结果均已提交，可直接审计。
+所有数字的原始 latency 数据（每个组件 1,000 行 CSV）与统计结果（含 flatness 审计）均已提交，可直接审计。
 
 ---
 

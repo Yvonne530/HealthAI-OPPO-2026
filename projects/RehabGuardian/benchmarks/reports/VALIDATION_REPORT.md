@@ -6,8 +6,8 @@ a script or artifact behind it.
 
 | Validation | Evidence | Status |
 |---|---|---|
-| Build reproducibility | `gradlew assembleDebug` → 4 per-ABI debug APKs (JDK 17 / Gradle 8.13 / AGP 8.3.2) | ✅ |
-| Model-level inference latency | 5,000-run MNN benchmark × 4 components; raw CSV + stats in `benchmarks/results/` | ✅ |
+| Build reproducibility | `gradlew assembleDebug` → per-ABI debug APKs `arm64-v8a` + `armeabi-v7a` (JDK 17 / Gradle 8.13 / AGP 8.3.2; `abiFilters` limited to the ABIs MNN ships) | ✅ |
+| Model-level inference latency | 1,000-iteration block-measured MNN benchmark × 4 components, each run flatness-audited (drift ≤ 1.34×); raw CSV + stats in `benchmarks/results/` | ✅ |
 | Tensor contract (I/O names & shapes match `RGPhaseAEngine.kt`) | `benchmark_validate.py` → `results/model_contract.json` (3/3 PASS) | ✅ |
 | NaN / Inf safety check | Same script; `nan_inf_count = 0` for all 3 models | ✅ |
 | PyTorch vs ONNX vs MNN numerical consistency | Original training checkpoints not in this repository — **not yet measured** | ⏳ pending |

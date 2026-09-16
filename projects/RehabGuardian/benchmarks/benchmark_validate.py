@@ -1,7 +1,10 @@
 """
 benchmark_validate.py — Model contract & NaN/Inf safety validation.
 Loads each production MNN model, verifies the exact tensor contract used by
-RGPhaseAEngine.kt (input/output names & shapes), and checks outputs are finite.
+RGPhaseAEngine.kt (input/output names & shapes), and checks outputs are finite
+AND reproducible across repeated runs with an identical input. Repeated runs
+matter: a faulty output-retrieval path can read freed heap memory and yield
+finite-looking garbage, which a single-shot check would accept.
 Writes real results to results/model_contract.json.
 """
 import sys, os, json
@@ -20,21 +23,33 @@ for fname, in_name, in_shape, out_names, out_shapes in MODELS:
     net, sess = make_session(fname)
     x = np.random.RandomState(42).randn(*in_shape).astype(np.float32)  # deterministic input
     try:
+        # warm-up, then capture the reference output and verify it is reproducible.
+        # A previous version of run_once() read freed heap memory, so a single
+        # sample could look "finite" while being pure garbage; repeating the run
+        # with an identical input catches that class of bug.
+        run_once(net, sess, in_name, x, out_names)
         out = run_once(net, sess, in_name, x, out_names)
+        reps = [run_once(net, sess, in_name, x, out_names) for _ in range(4)]
     except Exception as e:
         results["checks"].append({"model": fname, "status": "FAIL", "error": str(e)})
         results["all_pass"] = False
         continue
     shape_ok = all(list(out[n].shape) == s for n, s in zip(out_names, out_shapes))
     finite_ok = all(bool(np.isfinite(out[n]).all()) for n in out_names)
-    status = "PASS" if (shape_ok and finite_ok) else "FAIL"
+    drift = max(float(np.max(np.abs(r[n] - out[n]))) for r in reps for n in out_names)
+    reproducible = drift == 0.0
+    status = "PASS" if (shape_ok and finite_ok and reproducible) else "FAIL"
     results["all_pass"] &= (status == "PASS")
     results["checks"].append({
         "model": fname,
         "input_name": in_name, "input_shape": in_shape,
         "output_shapes": {n: list(out[n].shape) for n in out_names},
-        "shape_match": shape_ok, "nan_inf_count": int(sum(np.size(out[n]) - np.isfinite(out[n]).sum() for n in out_names)),
+        "shape_match": shape_ok,
+        "nan_inf_count": int(sum(np.size(out[n]) - np.isfinite(out[n]).sum() for n in out_names)),
         "deterministic_input_seed": 42,
+        "warmup_runs": 1, "repeated_runs": len(reps),
+        "reproducible": reproducible, "max_abs_drift": drift,
+        "output_magnitude": {n: float(np.max(np.abs(out[n]))) for n in out_names},
         "sample_output": {n: np.round(out[n].ravel()[:4], 5).tolist() for n in out_names},
         "status": status,
     })
